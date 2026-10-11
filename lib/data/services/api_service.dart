@@ -29,6 +29,22 @@ class ApiService {
       AuthInterceptor(),
     );
 
+    Future<Map<String, dynamic>> getBeneficiaryDetails(int id) async {
+      final response = await ApiService().dio.get(
+        '/beneficiaries/$id',
+      );
+
+      final body = Map<String, dynamic>.from(response.data);
+
+      if (body['success'] != true) {
+        throw Exception(
+          body['message'] ?? 'Failed to fetch beneficiary details',
+        );
+      }
+
+      return Map<String, dynamic>.from(body['data']);
+    }
+
     dio.interceptors.add(
       LogInterceptor(
         requestBody: true,

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
@@ -5,6 +7,44 @@ class StorageService {
   static const String languageKey = "language_code";
   static const String accessTokenKey = "access_token";
   static const String refreshTokenKey = "refresh_token";
+
+
+
+  //============================
+  //user details from the login
+
+  //=============================
+
+  static const String userProfileKey = 'user_profile';
+
+  static Future<void> saveUserProfile(
+      Map<String, dynamic> user,
+      ) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString(
+      userProfileKey,
+      jsonEncode(user),
+    );
+  }
+
+  static Future<Map<String, dynamic>?> getUserProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(userProfileKey);
+
+    if (json == null || json.isEmpty) {
+      return null;
+    }
+
+    try {
+      return Map<String, dynamic>.from(
+        jsonDecode(json) as Map,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
 
   // ==========================
   // Language
@@ -110,6 +150,8 @@ class StorageService {
   static Future<void> clearSession() async {
     final prefs =
     await SharedPreferences.getInstance();
+
+    await prefs.remove(userProfileKey);
 
     await prefs.remove(
       accessTokenKey,

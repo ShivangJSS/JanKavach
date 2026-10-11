@@ -19,6 +19,16 @@ class AuthRepository {
       data: request.toJson(),
     );
 
+    final data = Map<String, dynamic>.from(
+      response.data['data'] as Map,
+    );
+
+    final user = Map<String, dynamic>.from(
+      data['user'] as Map,
+    );
+
+    await StorageService.saveUserProfile(user);
+
     final loginResponse =
     LoginResponse.fromJson(response.data);
 
