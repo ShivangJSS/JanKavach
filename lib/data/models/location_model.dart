@@ -19,4 +19,11 @@ class LocationModel {
       pincode: json['pincode']?.toString(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'area_type': areaType,
+    'pincode': pincode,
+  };
 }

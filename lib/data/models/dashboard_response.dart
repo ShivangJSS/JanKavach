@@ -15,23 +15,73 @@ class DashboardSummary {
   });
 
   factory DashboardSummary.fromJson(Map<String, dynamic> json) {
-    int readCount(String key) {
-      final value = json[key];
-
-      if (value is int) return value;
-      if (value is num) return value.toInt();
-
-      return int.tryParse(value?.toString() ?? '') ?? 0;
+    int readCount(List<String> keys) {
+      for (final key in keys) {
+        final value = json[key];
+        if (value is int) return value;
+        if (value is num) return value.toInt();
+        if (value != null) {
+          final parsed = int.tryParse(value.toString());
+          if (parsed != null) return parsed;
+        }
+      }
+      return 0;
     }
 
     return DashboardSummary(
+      beneficiariesRegistered: readCount([
+        'beneficiaries_registered',
+        'total_beneficiaries',
+        'total_users_registered',
+        'registered_beneficiaries',
+      ]),
+      applicationsSubmitted: readCount([
+        'applications_submitted',
+        'total_applied',
+        'applied_schemes',
+        'total_applications',
+      ]),
+      applicationsApproved: readCount([
+        'applications_approved',
+        'approved_applications',
+        'complete',
+        'completed',
+        'total_complete',
+      ]),
+      followupsDone: readCount([
+        'followups_done',
+        'followups_due',
+        'followup_due',
+        'pending_followups',
+        'pending',
+        'due_followups',
+      ]),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'beneficiaries_registered': beneficiariesRegistered,
+      'applications_submitted': applicationsSubmitted,
+      'applications_approved': applicationsApproved,
+      'followups_done': followupsDone,
+    };
+  }
+
+  DashboardSummary copyWith({
+    int? beneficiariesRegistered,
+    int? applicationsSubmitted,
+    int? applicationsApproved,
+    int? followupsDone,
+  }) {
+    return DashboardSummary(
       beneficiariesRegistered:
-      readCount('beneficiaries_registered'),
+          beneficiariesRegistered ?? this.beneficiariesRegistered,
       applicationsSubmitted:
-      readCount('applications_submitted'),
+          applicationsSubmitted ?? this.applicationsSubmitted,
       applicationsApproved:
-      readCount('applications_approved'),
-      followupsDone: readCount('followups_done'),
+          applicationsApproved ?? this.applicationsApproved,
+      followupsDone: followupsDone ?? this.followupsDone,
     );
   }
 }

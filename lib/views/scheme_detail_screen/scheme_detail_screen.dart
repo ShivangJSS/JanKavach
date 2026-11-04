@@ -1,8 +1,8 @@
 
 import 'package:flutter/material.dart';
 
-import '../../data/services/api_service.dart';
 import '../../data/models/scheme_model.dart';
+import '../../data/repository/scheme_repository.dart';
 
 class SchemeDetailScreen extends StatefulWidget {
   final SchemeModel scheme;
@@ -22,6 +22,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
   static const Color darkGreen = Color(0xFF075832);
   static const Color background = Color(0xFFF4F7F5);
 
+  final SchemeRepository _schemeRepository = SchemeRepository();
   Map<String, dynamic>? _details;
   bool _isLoading = true;
   String? _error;
@@ -29,42 +30,45 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
   @override
   void initState() {
     super.initState();
+    // Immediately render using bundled catalog / SchemeModel fallback so offline opens instantly!
+    _details = _schemeRepository.getImmediateOfflineDetails(widget.scheme);
+    _isLoading = _details == null;
     _loadDetails();
   }
 
   Future<void> _loadDetails() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    if (_details == null) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
-      final response = await ApiService().dio.get(
-        '/schemes/${widget.scheme.id}',
+      final data = await _schemeRepository.getSchemeDetails(
+        widget.scheme.id,
+        fallbackScheme: widget.scheme,
       );
-
-      final responseData =
-      Map<String, dynamic>.from(response.data as Map);
-
-      if (responseData['success'] != true) {
-        throw Exception(
-          responseData['message'] ?? 'Unable to load scheme details.',
-        );
-      }
-
-      final data =
-      Map<String, dynamic>.from(responseData['data'] as Map);
 
       if (!mounted) return;
 
       setState(() {
         _details = data;
         _isLoading = false;
+        _error = null;
       });
     } catch (e) {
-      debugPrint('Scheme details API failed: $e');
+      debugPrint('Scheme details load error: $e');
 
       if (!mounted) return;
+
+      // If we already have offline details, keep displaying them cleanly
+      if (_details != null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
       setState(() {
         _error = 'Unable to load scheme details. Please try again.';

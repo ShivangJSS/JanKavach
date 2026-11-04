@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../viewModels/login_viewmodel.dart';
+import '../../viewModels/welcome_viewmodel.dart';
 import '../dashboard_screen/dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -162,7 +163,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
 
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 18),
+
+                        // Language selector
+                        _buildLanguageDropdown(context),
+
+                        const SizedBox(height: 18),
 
                         // Sign-in card
                         Container(
@@ -420,6 +426,99 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageDropdown(BuildContext context) {
+    final welcomeVm = context.watch<WelcomeViewModel>();
+
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        border: Border.all(
+          color: const Color(0xFFD6E5D8),
+          width: 1.2,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: darkGreen.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.translate,
+            size: 26,
+            color: green,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Language',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
+                ),
+                SizedBox(
+                  height: 26,
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: welcomeVm.selectedLanguage,
+                      isExpanded: true,
+                      isDense: true,
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: green,
+                        size: 24,
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'en',
+                          child: Text(
+                            'English',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'hi',
+                          child: Text(
+                            'हिन्दी',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          welcomeVm.setLanguage(value);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

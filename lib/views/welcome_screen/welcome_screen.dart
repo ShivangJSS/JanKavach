@@ -1,8 +1,6 @@
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../viewModels/welcome_viewmodel.dart';
 import '../login_screen/login_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -15,8 +13,6 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<WelcomeViewModel>();
-
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
@@ -94,97 +90,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
 
-                      SizedBox(height: compact ? 12 : 18),
-
-                      // Language dropdown
-                      Container(
-                        height: compact ? 60 : 68,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(
-                            color: const Color(0xFFD6E5D8),
-                            width: 1.3,
-                          ),
-                          borderRadius: BorderRadius.circular(17),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.translate,
-                              size: 28,
-                              color: green,
-                            ),
-                            const SizedBox(width: 13),
-
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Language',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-
-                                  SizedBox(
-                                    height: 28,
-                                    child: DropdownButtonHideUnderline(
-                                      child: DropdownButton<String>(
-                                        value: vm.selectedLanguage,
-                                        isExpanded: true,
-                                        isDense: true,
-                                        icon: const Icon(
-                                          Icons.keyboard_arrow_down,
-                                          color: green,
-                                          size: 24,
-                                        ),
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: 'en',
-                                            child: Text(
-                                              'English',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'hi',
-                                            child: Text(
-                                              'हिन्दी',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                        onChanged: (value) {
-                                          if (value != null) {
-                                            vm.setLanguage(value);
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      SizedBox(height: compact ? 1 : 18),
+                      SizedBox(height: compact ? 20 : 30),
 
                       const Text(
                         'Support citizens to discover and access '

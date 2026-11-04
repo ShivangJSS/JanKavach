@@ -80,4 +80,38 @@ class SchemeModel {
       sourceUrl: json['source_url']?.toString(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'code': code,
+      'name': name,
+      'short_name': shortName,
+      'description': description,
+      'level': level,
+      'state': stateName == null
+          ? null
+          : {'name': stateName},
+      'status': status,
+      'active_enrollment': activeEnrollment,
+      'theme': themeName == null && themeColor == null
+          ? null
+          : {
+        'name': themeName,
+        'color': themeColor,
+      },
+      'target_group_summary': targetGroupSummary,
+      'eligibility_summary': eligibilitySummary,
+      'benefit': {
+        'type': benefitType,
+        'description': benefitDescription,
+        'amount': benefitAmount,
+        'amount_text': benefitAmountText,
+      },
+      'application_mode': applicationMode,
+      'portal_url': portalUrl,
+      'source_url': sourceUrl,
+    };
+  }
+
 }

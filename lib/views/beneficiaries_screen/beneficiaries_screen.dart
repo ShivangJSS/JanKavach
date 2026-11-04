@@ -3,9 +3,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../data/local/beneficiary_local_dao.dart';
 import '../../data/models/ beneficiary_model.dart';
-import '../../viewmodels/beneficiary_viewmodel.dart';
+import '../../viewModels/beneficiary_viewmodel.dart';
 import '../beneficiary_detail_screen/beneficiary_detail_screen.dart';
+import '../beneficiary_registration/beneficiary_registration_screen.dart';
+import '../../data/services/beneficiary_sync_service.dart';
 
 
 class BeneficiariesScreen extends StatefulWidget {
@@ -13,10 +16,11 @@ class BeneficiariesScreen extends StatefulWidget {
 
   @override
   State<BeneficiariesScreen> createState() =>
-      _BeneficiariesScreenState();
+      BeneficiariesScreenState();
 }
 
-class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
+class BeneficiariesScreenState extends State<BeneficiariesScreen> {
+  final Set<int> _syncingBeneficiaryIds = <int>{};
   static const Color green = Color(0xFF087443);
   static const Color darkGreen = Color(0xFF075832);
   static const Color background = Color(0xFFF4F7F5);
@@ -25,7 +29,12 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
   final TextEditingController _searchController =
   TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final BeneficiaryLocalDao _localDao = BeneficiaryLocalDao();
 
+  int _selectedTab = 0;
+
+  List<Map<String, dynamic>> _drafts = [];
+  bool _isLoadingDrafts = false;
   Timer? _searchDebounce;
   String _search = '';
 
@@ -36,7 +45,7 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
     _viewModel = BeneficiaryViewModel();
     _viewModel.addListener(_refresh);
     _viewModel.loadBeneficiaries();
-
+    _loadDrafts();
     _scrollController.addListener(_onScroll);
   }
 
@@ -45,6 +54,7 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
   }
 
   void _onScroll() {
+    if (_selectedTab != 0) return;
     if (!_scrollController.hasClients) return;
 
     if (_scrollController.position.pixels >=
@@ -52,6 +62,7 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
       _viewModel.loadBeneficiaries(search: _search);
     }
   }
+
 
   void _onSearchChanged(String value) {
     _searchDebounce?.cancel();
@@ -70,11 +81,131 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
     );
   }
 
+
+
+  Future<void> _loadDrafts() async {
+    setState(() => _isLoadingDrafts = true);
+
+    try {
+      final drafts = await _localDao.getDrafts();
+
+      if (!mounted) return;
+
+      setState(() {
+        _drafts = drafts;
+      });
+    } catch (error) {
+      debugPrint('Loading drafts failed: $error');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to load saved drafts.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingDrafts = false);
+      }
+    }
+  }
+
+  Future<void> _resumeDraft(int localId) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+
+
+        builder: (_) => BeneficiaryRegistrationScreen(
+          localDraftId: localId,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    await _loadDrafts();
+    if (result == true) {
+      await _refreshList();
+    }
+
+  }
+
+
+
+  Future<void> refreshBeneficiaries() async {
+    if (!mounted) return;
+    await _loadDrafts();
+    await _refreshList();
+  }
+
   Future<void> _refreshList() async {
     await _viewModel.loadBeneficiaries(
       refresh: true,
       search: _search,
     );
+  }
+
+  Future<void> _syncBeneficiaryNow(BeneficiaryModel beneficiary) async {
+    final localId = beneficiary.id.abs();
+    if (_syncingBeneficiaryIds.contains(localId) ||
+        BeneficiarySyncService.instance.isSyncingLocalId(localId)) {
+      return;
+    }
+
+    setState(() => _syncingBeneficiaryIds.add(localId));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            SizedBox(width: 12),
+            Text('Syncing beneficiary with server...'),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    try {
+      final success = await BeneficiarySyncService.instance.syncSingleBeneficiary(localId);
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Beneficiary synced with server successfully!'),
+            backgroundColor: green,
+          ),
+        );
+        await refreshBeneficiaries();
+      } else {
+        final record = await _localDao.getRecord(localId);
+        if (!mounted) return;
+        final errorMsg = record?['sync_error']?.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorMsg != null && errorMsg.isNotEmpty
+                  ? 'Sync failed: $errorMsg'
+                  : 'Unable to sync. Please ensure internet is connected.',
+            ),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+        await refreshBeneficiaries();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _syncingBeneficiaryIds.remove(localId));
+      }
+    }
   }
 
   @override
@@ -98,18 +229,42 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const BeneficiaryRegistrationScreen(),
+            ),
+          );
+          if (!mounted) return;
+          await _loadDrafts();
+          if (result == true) {
+            await _refreshList();
+          }
+        },
+        backgroundColor: green,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.person_add_alt_1),
+        label: const Text(
+          'Add Beneficiary',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
     );
   }
 
   Widget _buildBody() {
-    if (_viewModel.isLoading &&
+    if (_selectedTab == 0 &&
+        _viewModel.isLoading &&
         _viewModel.beneficiaries.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: green),
       );
     }
 
-    if (_viewModel.error != null &&
+    if (_selectedTab == 0 &&
+        _viewModel.error != null &&
         _viewModel.beneficiaries.isEmpty) {
       return Center(
         child: Padding(
@@ -145,61 +300,265 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
 
     return RefreshIndicator(
       color: green,
-      onRefresh: _refreshList,
+      onRefresh: () async {
+        if (_selectedTab == 0) {
+          await _refreshList();
+        } else {
+          await _loadDrafts();
+        }
+      },
       child: ListView(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
         children: [
+          const SizedBox(height: 4),
 
-          const SizedBox(height: 20),
-          _buildSearchField(),
+          // Registered / Drafts tab selector
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFE1E8E4),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildTabButton(
+                    label: 'Registered',
+                    selected: _selectedTab == 0,
+                    onTap: () {
+                      setState(() => _selectedTab = 0);
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: _buildTabButton(
+                    label: 'Drafts (${_drafts.length})',
+                    selected: _selectedTab == 1,
+                    onTap: () {
+                      setState(() => _selectedTab = 1);
+                      _loadDrafts();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           const SizedBox(height: 18),
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Registered Beneficiaries',
-                  style: TextStyle(
-                    color: Color(0xFF19392C),
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
+
+          // Show the selected tab's content
+          if (_selectedTab == 0) ...[
+            _buildSearchField(),
+
+            const SizedBox(height: 18),
+
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Registered Beneficiaries',
+                    style: TextStyle(
+                      color: Color(0xFF19392C),
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${_viewModel.total} records',
+                  style: const TextStyle(
+                    color: Colors.blueGrey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            if (_viewModel.beneficiaries.isEmpty)
+              _buildEmptyState()
+            else
+              ..._viewModel.beneficiaries
+                  .map(_buildBeneficiaryCard),
+
+            if (_viewModel.isLoadingMore)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: green,
                   ),
                 ),
               ),
-              Text(
-                '${_viewModel.total} records',
-                style: const TextStyle(
-                  color: Colors.blueGrey,
-                  fontSize: 12,
+
+            if (_viewModel.error != null &&
+                _viewModel.beneficiaries.isNotEmpty)
+              TextButton.icon(
+                onPressed: () {
+                  _viewModel.loadBeneficiaries(
+                    search: _search,
+                  );
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text(
+                  'Failed to load more. Retry',
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (_viewModel.beneficiaries.isEmpty)
-            _buildEmptyState()
-          else
-            ..._viewModel.beneficiaries.map(_buildBeneficiaryCard),
-          if (_viewModel.isLoadingMore)
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(
-                child: CircularProgressIndicator(color: green),
-              ),
-            ),
-          if (_viewModel.error != null &&
-              _viewModel.beneficiaries.isNotEmpty)
-            TextButton.icon(
-              onPressed: () => _viewModel.loadBeneficiaries(
-                search: _search,
-              ),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Failed to load more. Retry'),
-            ),
+          ] else ...[
+            _buildDraftsList(),
+          ],
         ],
       ),
     );
   }
+
+
+  Widget _buildTabButton({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(11),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        decoration: BoxDecoration(
+          color: selected ? green : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : darkGreen,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+  Widget _buildDraftsList() {
+    if (_isLoadingDrafts && _drafts.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(
+          child: CircularProgressIndicator(color: green),
+        ),
+      );
+    }
+
+    if (_drafts.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.drafts_outlined,
+              size: 54,
+              color: Colors.blueGrey,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'No saved drafts yet',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: darkGreen,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Incomplete registrations you save will appear here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.blueGrey),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _loadDrafts,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: _drafts.map((draft) {
+        final localId = draft['local_id'] as int;
+        final formData = Map<String, dynamic>.from(
+          draft['form_data'] as Map,
+        );
+        final formState = Map<String, dynamic>.from(
+          formData['form_state'] as Map? ?? {},
+        );
+        final controllers = Map<String, dynamic>.from(
+          formState['controllers'] as Map? ?? {},
+        );
+
+        final name = controllers['Beneficiary Name']
+            ?.toString()
+            .trim();
+
+        final currentStep =
+            (draft['current_step'] as num?)?.toInt() ?? 0;
+
+        return Card(
+          color: const Color(0xFFFFF4E8),
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFFFE0BE)),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(14),
+            leading: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(
+                Icons.edit_note,
+                color: Color(0xFFD9700C),
+              ),
+            ),
+            title: Text(
+              name == null || name.isEmpty
+                  ? 'Unnamed beneficiary'
+                  : name,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF26352E),
+              ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Step ${currentStep + 1} of 6 · Saved on this device',
+                style: const TextStyle(
+                  color: Color(0xFF5D6B64),
+                ),
+              ),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFFD9700C),
+            ),
+            onTap: () => _resumeDraft(localId),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
 
 
   Widget _buildSearchField() {
@@ -247,12 +606,12 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
     final assessment = beneficiary.assessmentStatus ?? 'Unknown';
 
     return Card(
-      color: Colors.white,
+      color: const Color(0xFFEDF7EE),
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 14),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFFE3EAE6)),
+        side: const BorderSide(color: Color(0xFFD2EBD9)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -276,7 +635,7 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
                 children: [
                   CircleAvatar(
                     radius: 27,
-                    backgroundColor: const Color(0xFFE8F4EC),
+                    backgroundColor: Colors.white,
                     child: Icon(
                       beneficiary.gender?.toLowerCase() == 'female'
                           ? Icons.person_2_outlined
@@ -304,17 +663,17 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
                               ? 'Code unavailable'
                               : beneficiary.beneficiaryCode,
                           style: const TextStyle(
-                            color: Colors.blueGrey,
+                            color: Color(0xFF5A6E63),
                             fontSize: 12,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right,
-                    color: Colors.blueGrey,
-                    size: 27,
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: green.withValues(alpha: 0.7),
+                    size: 24,
                   ),
                 ],
               ),
@@ -322,13 +681,54 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   _statusBadge(status),
                   _statusBadge(assessment),
+                  if (status.contains('Sync Failed') || status.contains('Pending Sync'))
+                    Builder(
+                      builder: (context) {
+                        final isSyncing = _syncingBeneficiaryIds.contains(beneficiary.id.abs()) ||
+                            BeneficiarySyncService.instance.isSyncingLocalId(beneficiary.id.abs());
+
+                        return InkWell(
+                          onTap: isSyncing ? null : () => _syncBeneficiaryNow(beneficiary),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isSyncing ? const Color(0xFF06452D) : const Color(0xFF075832),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isSyncing)
+                                  const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                else
+                                  const Icon(Icons.sync, color: Colors.white, size: 13),
+                                const SizedBox(width: 5),
+                                Text(
+                                  isSyncing ? 'Syncing...' : 'Sync Now',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
               const SizedBox(height: 14),
-              const Divider(height: 1, color: Color(0xFFEDF0EE)),
+              const Divider(height: 1, color: Color(0xFFD2EBD9)),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -410,7 +810,7 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
                     style: TextStyle(
                       color: green,
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],

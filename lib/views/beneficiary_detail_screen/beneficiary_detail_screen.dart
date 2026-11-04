@@ -1,27 +1,22 @@
-
 import 'package:flutter/material.dart';
 
 import '../../data/models/ beneficiary_model.dart';
 import '../../data/repository/beneficiary_repository.dart';
-
+import '../eligible_schemes_screen/eligible_schemes_screen.dart';
+import '../followup/beneficiary_followup_screen.dart';
 
 class BeneficiaryDetailScreen extends StatefulWidget {
   final BeneficiaryModel beneficiary;
 
-  const BeneficiaryDetailScreen({
-    super.key,
-    required this.beneficiary,
-  });
+  const BeneficiaryDetailScreen({super.key, required this.beneficiary});
 
   @override
   State<BeneficiaryDetailScreen> createState() =>
       _BeneficiaryDetailScreenState();
 }
 
-class _BeneficiaryDetailScreenState
-    extends State<BeneficiaryDetailScreen> {
-  final BeneficiaryRepository _repository =
-  BeneficiaryRepository();
+class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
+  final BeneficiaryRepository _repository = BeneficiaryRepository();
 
   Map<String, dynamic>? _details;
   bool _isLoading = true;
@@ -32,15 +27,12 @@ class _BeneficiaryDetailScreenState
   @override
   void initState() {
     super.initState();
+    _details = widget.beneficiary.toJson();
+    _isLoading = false;
     _loadDetails();
   }
 
   Future<void> _loadDetails() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
     try {
       final details = await _repository.getBeneficiaryDetails(
         widget.beneficiary.id,
@@ -51,13 +43,16 @@ class _BeneficiaryDetailScreenState
       setState(() {
         _details = details;
         _isLoading = false;
+        _error = null;
       });
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
-        _error = e.toString();
         _isLoading = false;
+        if (_details == null || _details!.isEmpty) {
+          _error = e.toString();
+        }
       });
     }
   }
@@ -84,8 +79,18 @@ class _BeneficiaryDetailScreenState
     if (date == null) return value.toString();
 
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
     return '${date.day} ${months[date.month - 1]} ${date.year}';
@@ -100,10 +105,7 @@ class _BeneficiaryDetailScreenState
           const SizedBox(width: 9),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -130,10 +132,7 @@ class _BeneficiaryDetailScreenState
                   flex: 5,
                   child: Text(
                     item.key,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -158,10 +157,7 @@ class _BeneficiaryDetailScreenState
 
   Widget _statusChip(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
@@ -194,44 +190,39 @@ class _BeneficiaryDetailScreenState
         ],
       ),
       body: _isLoading
-          ? const Center(
-        child: CircularProgressIndicator(color: _green),
-      )
+          ? const Center(child: CircularProgressIndicator(color: _green))
           : _error != null
           ? Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Unable to load beneficiary details',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Unable to load beneficiary details',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _loadDetails,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Try again'),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _loadDetails,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
-              ),
-            ],
-          ),
-        ),
-      )
+            )
           : _buildDetails(),
     );
   }
@@ -260,11 +251,7 @@ class _BeneficiaryDetailScreenState
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: const Color(0xFFE3F3E8),
-                      child: const Icon(
-                        Icons.person,
-                        color: _green,
-                        size: 30,
-                      ),
+                      child: const Icon(Icons.person, color: _green, size: 30),
                     ),
                     const SizedBox(width: 13),
                     Expanded(
@@ -297,28 +284,19 @@ class _BeneficiaryDetailScreenState
                   runSpacing: 8,
                   children: [
                     _statusChip(recordStatus, _green),
-                    _statusChip(
-                      assessmentStatus,
-                      Colors.orange.shade800,
-                    ),
+                    _statusChip(assessmentStatus, Colors.orange.shade800),
                   ],
                 ),
               ],
             ),
           ),
 
-          _sectionTitle(
-            'Personal Information',
-            Icons.person_outline,
-          ),
+          _sectionTitle('Personal Information', Icons.person_outline),
           _infoCard([
             MapEntry('Gender', _value('gender')),
             MapEntry('Date of birth', _formatDate('dob')),
             MapEntry('Age', '${_value('age')} years'),
-            MapEntry(
-              'Registration date',
-              _formatDate('registration_date'),
-            ),
+            MapEntry('Registration date', _formatDate('registration_date')),
           ]),
 
           _sectionTitle('Family Details', Icons.family_restroom),
@@ -338,10 +316,7 @@ class _BeneficiaryDetailScreenState
               'Aadhaar available',
               _value('has_aadhaar') == '1' ? 'Yes' : 'No',
             ),
-            MapEntry(
-              'Aadhaar last 4 digits',
-              _value('aadhaar_last4'),
-            ),
+            MapEntry('Aadhaar last 4 digits', _value('aadhaar_last4')),
           ]),
 
           _sectionTitle('Address Details', Icons.location_on_outlined),
@@ -362,22 +337,81 @@ class _BeneficiaryDetailScreenState
           _infoCard([
             MapEntry(
               'Consent given',
-              _value('consent_given') == '1' ? 'Yes' : 'No',
+              _value('consent_given') == '1' || _value('consent_given') == 'true' ? 'Yes' : 'No',
             ),
             MapEntry(
-              'Consent date',
-              _formatDate('consent_date'),
+              'Privacy declaration accepted',
+              _value('privacy_consent') == '1' || _value('privacy_consent') == 'true' ? 'Yes' : 'No',
             ),
+            MapEntry('Consent date', _formatDate('consent_date')),
             MapEntry('Remarks', _value('remarks')),
-            MapEntry(
-              'Last assessed',
-              _value('last_assessed_at'),
-            ),
-            MapEntry(
-              'Last matched',
-              _value('last_matched_at'),
-            ),
+            MapEntry('Last assessed', _value('last_assessed_at')),
+            MapEntry('Last matched', _value('last_matched_at')),
           ]),
+
+          const SizedBox(height: 24),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EligibleSchemesScreen(
+                      beneficiaryId: widget.beneficiary.id,
+                      beneficiaryName: widget.beneficiary.name,
+                      beneficiary: widget.beneficiary,
+                      beneficiaryDetails: _details,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('Check Eligibility'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BeneficiaryFollowupScreen(
+                      beneficiaryId: widget.beneficiary.id,
+                      beneficiaryName: widget.beneficiary.name,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.track_changes_outlined, color: _green),
+              label: const Text(
+                'Track Scheme Follow-ups',
+                style: TextStyle(color: _green, fontWeight: FontWeight.bold),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: _green, width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
 
           const SizedBox(height: 24),
         ],

@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'data/services/connectivity_sync_service.dart';
+import 'data/services/storage_service.dart';
 
 import 'viewModels/login_viewmodel.dart';
 import 'viewModels/welcome_viewmodel.dart';
 
+import 'views/dashboard_screen/dashboard_screen.dart';
 import 'views/welcome_screen/welcome_screen.dart';
 
-void main() {
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await ConnectivitySyncService.instance.start();
+
+  final bool isLoggedIn = await StorageService.isLoggedIn();
+
   runApp(
     MultiProvider(
       providers: [
@@ -17,13 +27,19 @@ void main() {
           create: (_) => LoginViewModel(),
         ),
       ],
-      child: const MyApp(),
+      child: MyApp(isLoggedIn: isLoggedIn),
     ),
   );
 }
 
+
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+
+  const MyApp({
+    super.key,
+    this.isLoggedIn = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +51,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      home: const WelcomeScreen(),
+      home: isLoggedIn ? const DashboardScreen() : const WelcomeScreen(),
     );
   }
 }

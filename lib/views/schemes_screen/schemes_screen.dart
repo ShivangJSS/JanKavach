@@ -274,6 +274,43 @@ class _SchemesScreenState extends State<SchemesScreen> {
     );
   }
 
+  Map<String, Color> _schemeColors(String? theme) {
+    final t = theme?.toLowerCase() ?? '';
+    if (t.contains('health') || t.contains('insur')) {
+      return {
+        'card': const Color(0xFFEEF6FF),
+        'border': const Color(0xFFCCE2FE),
+        'icon': const Color(0xFF1377CC),
+        'badge': Colors.white,
+        'badgeText': const Color(0xFF0F60A5),
+      };
+    } else if (t.contains('edu') || t.contains('scholar') || t.contains('train')) {
+      return {
+        'card': const Color(0xFFFFF4E8),
+        'border': const Color(0xFFFFE0BE),
+        'icon': const Color(0xFFD9700C),
+        'badge': Colors.white,
+        'badgeText': const Color(0xFFB85900),
+      };
+    } else if (t.contains('pension') || t.contains('old') || t.contains('social')) {
+      return {
+        'card': const Color(0xFFFFEEEE),
+        'border': const Color(0xFFFFD4D6),
+        'icon': const Color(0xFFE5434B),
+        'badge': Colors.white,
+        'badgeText': const Color(0xFFD42E37),
+      };
+    } else {
+      return {
+        'card': const Color(0xFFEDF7EE),
+        'border': const Color(0xFFD2EBD9),
+        'icon': const Color(0xFF168A53),
+        'badge': Colors.white,
+        'badgeText': const Color(0xFF116B3F),
+      };
+    }
+  }
+
   Widget _buildSchemeCard(SchemeModel scheme) {
     final subtitle = (scheme.description?.trim().isNotEmpty ?? false)
         ? scheme.description!.trim()
@@ -281,13 +318,15 @@ class _SchemesScreenState extends State<SchemesScreen> {
         ? scheme.benefitDescription!.trim()
         : scheme.eligibilitySummary?.trim() ?? '';
 
+    final colors = _schemeColors(scheme.themeName);
+
     return Card(
-      color: Colors.white,
+      color: colors['card'],
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 14),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(color: Color(0xFFE4EBE7)),
+        side: BorderSide(color: colors['border']!),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(22),
@@ -307,13 +346,13 @@ class _SchemesScreenState extends State<SchemesScreen> {
               Container(
                 width: 62,
                 height: 62,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F4EC),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   _iconForTheme(scheme.themeName),
-                  color: green,
+                  color: colors['icon'],
                   size: 30,
                 ),
               ),
@@ -335,7 +374,7 @@ class _SchemesScreenState extends State<SchemesScreen> {
                             height: 1.3,
                           ),
                         ),
-                        _levelBadge(scheme.level),
+                        _levelBadge(scheme.level, colors['badge'], colors['badgeText']),
                       ],
                     ),
                     if (subtitle.isNotEmpty) ...[
@@ -345,7 +384,7 @@ class _SchemesScreenState extends State<SchemesScreen> {
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Color(0xFF6D7B75),
+                          color: Color(0xFF5D6B64),
                           fontSize: 13,
                           height: 1.4,
                         ),
@@ -355,8 +394,8 @@ class _SchemesScreenState extends State<SchemesScreen> {
                       const SizedBox(height: 6),
                       Text(
                         scheme.stateName!,
-                        style: const TextStyle(
-                          color: green,
+                        style: TextStyle(
+                          color: colors['icon'],
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -366,10 +405,10 @@ class _SchemesScreenState extends State<SchemesScreen> {
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(
-                Icons.chevron_right,
-                size: 28,
-                color: Colors.blueGrey,
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 24,
+                color: colors['icon']!.withValues(alpha: 0.7),
               ),
             ],
           ),
@@ -378,19 +417,19 @@ class _SchemesScreenState extends State<SchemesScreen> {
     );
   }
 
-  Widget _levelBadge(String level) {
+  Widget _levelBadge(String level, [Color? fill, Color? textColor]) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F4EC),
+        color: fill ?? Colors.white,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         level,
-        style: const TextStyle(
-          color: darkGreen,
+        style: TextStyle(
+          color: textColor ?? darkGreen,
           fontSize: 11,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import '../data/models/scheme_model.dart';
 import '../data/repository/scheme_repository.dart';
@@ -52,8 +51,11 @@ class SchemeViewModel extends ChangeNotifier {
       currentPage = (result['page'] as int) + 1;
       totalPages = result['totalPages'] as int;
       total = result['total'] as int;
+      error = null;
     } catch (e) {
-      error = 'Unable to load schemes. Please try again.';
+      if (_schemes.isEmpty) {
+        error = 'Unable to load schemes. Please check your connection.';
+      }
       debugPrint('Schemes API error: $e');
     } finally {
       isLoading = false;
