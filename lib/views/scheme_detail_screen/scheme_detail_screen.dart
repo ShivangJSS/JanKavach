@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models/scheme_model.dart';
 import '../../data/repository/scheme_repository.dart';
@@ -295,6 +296,11 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
     final eligibilityRules = _list(data['eligibility_rules']);
     final applicableStates = _list(geography['applicable_states']);
 
+    final modeStr = (application['mode'] ?? widget.scheme.applicationMode ?? '').toString().trim().toLowerCase();
+    final isOnline = modeStr == 'online' || modeStr == 'both';
+    final appUrl = (application['application_url'] ?? application['portal_url'] ?? widget.scheme.applicationUrl ?? widget.scheme.portalUrl)?.toString().trim();
+    final sourceUrl = (source['url'] ?? source['website'] ?? source['source_url'] ?? widget.scheme.sourceUrl)?.toString().trim();
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
       children: [
@@ -531,13 +537,26 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                   'Helpline',
                   _text(application['helpline']),
                 ),
-              if (application['portal_url'] != null) ...[
+              if (isOnline && appUrl != null && appUrl.isNotEmpty) ...[
                 const SizedBox(height: 14),
-                SelectableText(
-                  application['portal_url'].toString(),
-                  style: const TextStyle(
-                    color: green,
-                    decoration: TextDecoration.underline,
+                const Text(
+                  'Application Form URL:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64756C),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                InkWell(
+                  onTap: () => _openWebsite(appUrl),
+                  child: Text(
+                    appUrl,
+                    style: const TextStyle(
+                      color: green,
+                      fontSize: 13,
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
                 ),
               ],
@@ -563,7 +582,9 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _detailRow('Website', _text(source['website'])),
+              _detailRow('Website', _text(source['website'] ?? source['url'] ?? source['source_url'])),
+              if (isOnline && appUrl != null && appUrl.isNotEmpty)
+                _detailRow('Application Form', appUrl),
               _detailRow(
                 'Last verified',
                 _text(source['last_verified_date']),
@@ -583,6 +604,84 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
             ],
           ),
         ),
+
+        if ((isOnline && appUrl != null && appUrl.isNotEmpty) || (sourceUrl != null && sourceUrl.isNotEmpty)) ...[
+          const SizedBox(height: 8),
+          if (isOnline && appUrl != null && appUrl.isNotEmpty) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _openWebsite(appUrl),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text(
+                  'Apply Online (Application Form)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+            if (sourceUrl != null && sourceUrl.isNotEmpty && sourceUrl != appUrl) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openWebsite(sourceUrl),
+                  icon: const Icon(Icons.public, color: green),
+                  label: const Text(
+                    'Visit Official Website',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: green,
+                    side: const BorderSide(color: green, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ] else if (sourceUrl != null && sourceUrl.isNotEmpty) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _openWebsite(sourceUrl),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text(
+                  'Visit Official Website',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          const Text(
+            'You will be redirected to an external website. '
+            'Check its details before submitting any information.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.blueGrey,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
       ],
     );
   }
@@ -609,6 +708,39 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _openWebsite(String url) async {
+    final uri = Uri.tryParse(url.trim());
+
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The website URL is invalid.')),
+      );
+      return;
+    }
+
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open the website.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open the website.')),
+        );
+      }
+    }
   }
 
   @override

@@ -553,7 +553,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               cardBackground: const Color(0xFFEDF7EE),
               borderColor: const Color(0xFFD2EBD9),
               title: 'Add a Beneficiary',
-              subtitle: 'Six-step questionnaire',
+              subtitle: 'Seven-step questionnaire',
               onTap: () {
                 Navigator.push(
                   context,

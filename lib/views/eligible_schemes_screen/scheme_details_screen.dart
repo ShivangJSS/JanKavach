@@ -38,8 +38,9 @@ class SchemeDetailsScreen extends StatelessWidget {
     final benefitDescription = scheme.benefitDescription;
     final benefitAmount = _text(benefit['amount_text'],
         fallback: _text(benefit['amount'], fallback: ''));
-    final actionUrl = scheme.actionUrl;
-    final actionLabel = scheme.actionLabel;
+    final isOnline = scheme.isOnline;
+    final sourceUrl = scheme.validSourceUrl;
+    final applicationUrl = scheme.validApplicationUrl;
     final isEligible =
         scheme.eligibilityStatus.toLowerCase() == 'eligible';
 
@@ -248,6 +249,31 @@ class SchemeDetailsScreen extends StatelessWidget {
                       : process,
                   style: const TextStyle(height: 1.6),
                 ),
+                if (isOnline && applicationUrl != null) ...[
+                  const SizedBox(height: 14),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Application Form URL:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: darkGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  InkWell(
+                    onTap: () => _openWebsite(context, applicationUrl),
+                    child: Text(
+                      applicationUrl,
+                      style: const TextStyle(
+                        color: green,
+                        fontSize: 13,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -275,24 +301,71 @@ class SchemeDetailsScreen extends StatelessWidget {
           ],
 
           // Website / application action
-          if (actionUrl != null && actionLabel != null) ...[
+          if ((isOnline && applicationUrl != null) || sourceUrl != null) ...[
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _openWebsite(context, actionUrl),
-                icon: const Icon(Icons.open_in_new),
-                label: Text(actionLabel),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+            if (isOnline && applicationUrl != null) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _openWebsite(context, applicationUrl),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text(
+                    'Apply Online (Application Form)',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),
-            ),
+              if (sourceUrl != null && sourceUrl != applicationUrl) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openWebsite(context, sourceUrl),
+                    icon: const Icon(Icons.public, color: green),
+                    label: const Text(
+                      'Visit Official Website',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: green,
+                      side: const BorderSide(color: green, width: 1.5),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ] else if (sourceUrl != null) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _openWebsite(context, sourceUrl),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text(
+                    'Visit Official Website',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             const Text(
               'You will be redirected to an external website. '

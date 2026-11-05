@@ -147,8 +147,14 @@ class EligibleSchemeModel {
     if (json['application_mode'] != null && !appMap.containsKey('mode')) {
       appMap['mode'] = json['application_mode'];
     }
-    if (json['portal_url'] != null && !appMap.containsKey('portal_url')) {
-      appMap['portal_url'] = json['portal_url'];
+    final rawAppUrl = json['application_url'] ?? json['portal_url'] ?? appMap['application_url'] ?? appMap['portal_url'];
+    if (rawAppUrl != null) {
+      if (!appMap.containsKey('application_url')) {
+        appMap['application_url'] = rawAppUrl;
+      }
+      if (!appMap.containsKey('portal_url')) {
+        appMap['portal_url'] = rawAppUrl;
+      }
     }
     if (json['source_url'] != null && !appMap.containsKey('source_url')) {
       appMap['source_url'] = json['source_url'];
@@ -223,13 +229,21 @@ class EligibleSchemeModel {
       _toNullableString(application['process']);
 
   String? get portalUrl =>
-      _toNullableString(application['portal_url']);
+      _toNullableString(application['portal_url'] ?? application['application_url']);
+
+  String? get applicationUrl =>
+      _toNullableString(application['application_url'] ?? application['portal_url']);
 
   String? get applicationSourceUrl =>
       _toNullableString(application['source_url']);
 
   String? get applicationSourceWebsite =>
       _toNullableString(application['source_website']);
+
+  bool get isOnline {
+    final mode = (applicationMode ?? '').trim().toLowerCase();
+    return mode == 'online' || mode == 'both';
+  }
 
   String? get helplineNumber =>
       _toNullableString(application['helpline_number']);
@@ -248,25 +262,27 @@ class EligibleSchemeModel {
 
   // Prefer the application source URL, then the scheme-level source.
   String? get officialWebsiteUrl =>
-      _firstNonEmpty([applicationSourceUrl, sourceUrl]);
+      _firstNonEmpty([applicationSourceUrl, sourceUrl, applicationSourceWebsite, sourceWebsite]);
+
+  String? get validSourceUrl => _validHttpUrl(officialWebsiteUrl);
+
+  String? get validApplicationUrl {
+    if (!isOnline) return null;
+    return _validHttpUrl(applicationUrl);
+  }
 
   // Never assume a source website is an application portal.
   String? get actionUrl {
-    final mode = (applicationMode ?? '').trim().toLowerCase();
-
-    if (mode == 'online') {
-      final portal = _validHttpUrl(portalUrl);
-      if (portal != null) return portal;
+    if (isOnline) {
+      final app = _validHttpUrl(applicationUrl);
+      if (app != null) return app;
     }
 
     return _validHttpUrl(officialWebsiteUrl);
   }
 
   String? get actionLabel {
-    final mode = (applicationMode ?? '').trim().toLowerCase();
-    final portal = _validHttpUrl(portalUrl);
-
-    if (mode == 'online' && portal != null) {
+    if (isOnline && _validHttpUrl(applicationUrl) != null) {
       return 'Apply Online';
     }
 
@@ -299,6 +315,7 @@ class EligibleSchemeModel {
       'missing_documents': missingDocuments,
       'benefit': benefit,
       'application': application,
+      'application_url': applicationUrl,
       'source_url': sourceUrl,
       'source_website': sourceWebsite,
       'matched_at': matchedAt,

@@ -74,8 +74,16 @@ class WhatsAppShareService {
     }
 
     // Official links & helplines
-    final url = scheme.portalUrl ?? scheme.actionUrl ?? scheme.officialWebsiteUrl;
-    if (url != null && url.trim().isNotEmpty) {
+    if (scheme.isOnline && scheme.applicationUrl != null && scheme.applicationUrl!.trim().isNotEmpty) {
+      buffer.writeln('📝 *Application Form URL:* ${scheme.applicationUrl!.trim()}');
+      buffer.writeln();
+    }
+
+    final url = scheme.officialWebsiteUrl ?? scheme.sourceUrl ?? scheme.portalUrl ?? scheme.actionUrl;
+    if (url != null && url.trim().isNotEmpty && url.trim() != scheme.applicationUrl?.trim()) {
+      buffer.writeln('🌐 *Official Portal / Website:* ${url.trim()}');
+      buffer.writeln();
+    } else if (url != null && url.trim().isNotEmpty && !scheme.isOnline) {
       buffer.writeln('🌐 *Official Portal / Website:* ${url.trim()}');
       buffer.writeln();
     }
