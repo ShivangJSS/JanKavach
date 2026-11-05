@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/ beneficiary_model.dart';
+import '../../data/models/beneficiary_document_model.dart';
 import '../../data/repository/beneficiary_repository.dart';
 import '../eligible_schemes_screen/eligible_schemes_screen.dart';
 import '../followup/beneficiary_followup_screen.dart';
+import 'document_preview_screen.dart';
 
 class BeneficiaryDetailScreen extends StatefulWidget {
   final BeneficiaryModel beneficiary;
@@ -22,6 +24,11 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
   bool _isLoading = true;
   String? _error;
 
+  // Documents state
+  List<BeneficiaryDocumentModel> _documents = [];
+  bool _loadingDocuments = true;
+  String? _documentsError;
+
   static const Color _green = Color(0xFF21834A);
 
   @override
@@ -29,7 +36,14 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
     super.initState();
     _details = widget.beneficiary.toJson();
     _isLoading = false;
-    _loadDetails();
+    _loadAll();
+  }
+
+  Future<void> _loadAll() async {
+    await Future.wait([
+      _loadDetails(),
+      _loadDocuments(),
+    ]);
   }
 
   Future<void> _loadDetails() async {
@@ -53,6 +67,35 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
         if (_details == null || _details!.isEmpty) {
           _error = e.toString();
         }
+      });
+    }
+  }
+
+  Future<void> _loadDocuments() async {
+    setState(() {
+      _loadingDocuments = true;
+      _documentsError = null;
+    });
+
+    try {
+      final docs = await _repository.getBeneficiaryDocuments(
+        widget.beneficiary.id,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _documents = docs;
+        _loadingDocuments = false;
+        _documentsError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _loadingDocuments = false;
+        _documentsError =
+            e.toString().replaceAll('Exception: ', '').trim();
       });
     }
   }
@@ -173,6 +216,290 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
     );
   }
 
+  void _openDocumentPreview(BeneficiaryDocumentModel doc) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DocumentPreviewScreen(
+          document: doc,
+          beneficiaryName: widget.beneficiary.name,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDocumentIcon(BeneficiaryDocumentModel doc) {
+    if (doc.isPdf) {
+      return Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFDE8E8),
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: const Icon(
+          Icons.picture_as_pdf_rounded,
+          color: Color(0xFFD32F2F),
+          size: 24,
+        ),
+      );
+    }
+    if (doc.isImage) {
+      return Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8F1FC),
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: const Icon(
+          Icons.image_rounded,
+          color: Color(0xFF1976D2),
+          size: 24,
+        ),
+      );
+    }
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F3E8),
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: const Icon(
+        Icons.insert_drive_file_rounded,
+        color: _green,
+        size: 24,
+      ),
+    );
+  }
+
+  Widget _buildDocumentsSection() {
+    if (_loadingDocuments && _documents.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                color: _green,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Loading documents...',
+              style: TextStyle(
+                fontSize: 13,
+                color: Color(0xFF556059),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_documentsError != null && _documents.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.red.shade100),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              color: Colors.red.shade400,
+              size: 28,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _documentsError!,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _loadDocuments,
+              icon: const Icon(Icons.refresh, size: 16, color: _green),
+              label: const Text(
+                'Retry',
+                style: TextStyle(
+                  color: _green,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_documents.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE3F3E8),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.folder_open_outlined,
+                color: _green,
+                size: 26,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'No Documents Uploaded',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF16231C),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'No documents have been uploaded for this beneficiary yet.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: _documents.map((doc) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildDocumentIcon(doc),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            doc.documentName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF16231C),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        _statusChip(doc.verificationStatus, doc.statusColor),
+                      ],
+                    ),
+                    if (doc.documentNumber != null &&
+                        doc.documentNumber!.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        'Doc No: ${doc.documentNumber!}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      children: [
+                        Text(
+                          doc.fileFormatLabel,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: doc.isPdf
+                                ? const Color(0xFFD32F2F)
+                                : (doc.isImage
+                                    ? const Color(0xFF1976D2)
+                                    : _green),
+                          ),
+                        ),
+                        if (doc.fileSize != null && doc.fileSize!.isNotEmpty)
+                          Text(
+                            '• ${doc.fileSize!}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        if (doc.formattedUploadDate != null)
+                          Text(
+                            '• ${doc.formattedUploadDate!}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'Preview Document',
+                icon: const Icon(
+                  Icons.visibility_outlined,
+                  color: _green,
+                  size: 22,
+                ),
+                onPressed: () => _openDocumentPreview(doc),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -183,7 +510,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            onPressed: _isLoading ? null : _loadDetails,
+            onPressed: (_isLoading || _loadingDocuments) ? null : _loadAll,
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
           ),
@@ -192,38 +519,38 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: _green))
           : _error != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Unable to load beneficiary details',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(_error!, textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _loadAll,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Try again'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Unable to load beneficiary details',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(_error!, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _loadDetails,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Try again'),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : _buildDetails(),
+                  ),
+                )
+              : _buildDetails(),
     );
   }
 
@@ -232,7 +559,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
     final assessmentStatus = _value('assessment_status');
 
     return RefreshIndicator(
-      onRefresh: _loadDetails,
+      onRefresh: _loadAll,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -337,17 +664,27 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
           _infoCard([
             MapEntry(
               'Consent given',
-              _value('consent_given') == '1' || _value('consent_given') == 'true' ? 'Yes' : 'No',
+              _value('consent_given') == '1' ||
+                      _value('consent_given') == 'true'
+                  ? 'Yes'
+                  : 'No',
             ),
             MapEntry(
               'Privacy declaration accepted',
-              _value('privacy_consent') == '1' || _value('privacy_consent') == 'true' ? 'Yes' : 'No',
+              _value('privacy_consent') == '1' ||
+                      _value('privacy_consent') == 'true'
+                  ? 'Yes'
+                  : 'No',
             ),
             MapEntry('Consent date', _formatDate('consent_date')),
             MapEntry('Remarks', _value('remarks')),
             MapEntry('Last assessed', _value('last_assessed_at')),
             MapEntry('Last matched', _value('last_matched_at')),
           ]),
+
+          // Existing Documents Section
+          _sectionTitle('Existing Documents', Icons.folder_shared_outlined),
+          _buildDocumentsSection(),
 
           const SizedBox(height: 24),
 
@@ -410,8 +747,6 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
               ),
             ),
           ),
-
-          const SizedBox(height: 24),
 
           const SizedBox(height: 24),
         ],

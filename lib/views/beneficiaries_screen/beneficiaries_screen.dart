@@ -309,9 +309,9 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
       },
       child: ListView(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
         children: [
-          const SizedBox(height: 4),
+          const SizedBox(height: 0),
 
           // Registered / Drafts tab selector
           Container(
@@ -348,13 +348,13 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
             ),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 9),
 
           // Show the selected tab's content
           if (_selectedTab == 0) ...[
             _buildSearchField(),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 9),
 
             Row(
               children: [
@@ -378,7 +378,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
               ],
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 9),
 
             if (_viewModel.beneficiaries.isEmpty)
               _buildEmptyState()
@@ -608,7 +608,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     return Card(
       color: const Color(0xFFEDF7EE),
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: const BorderSide(color: Color(0xFFD2EBD9)),
@@ -626,7 +626,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -634,14 +634,14 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(
-                    radius: 27,
+                    radius: 16,
                     backgroundColor: Colors.white,
                     child: Icon(
                       beneficiary.gender?.toLowerCase() == 'female'
                           ? Icons.person_2_outlined
                           : Icons.person_outline,
                       color: green,
-                      size: 31,
+                      size: 20,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -677,10 +677,10 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 7),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 6,
+                runSpacing: 6,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   _statusBadge(status),
@@ -727,94 +727,6 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                     ),
                 ],
               ),
-              const SizedBox(height: 14),
-              const Divider(height: 1, color: Color(0xFFD2EBD9)),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.cake_outlined,
-                    size: 17,
-                    color: Colors.blueGrey,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      beneficiary.age != null
-                          ? '${beneficiary.age} years'
-                          : 'Age unavailable',
-                      style: const TextStyle(
-                        color: Color(0xFF5D6D64),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.phone_outlined,
-                    size: 16,
-                    color: Colors.blueGrey,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    beneficiary.mobile ?? 'No mobile',
-                    style: const TextStyle(
-                      color: Color(0xFF5D6D64),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              if (beneficiary.villageName != null &&
-                  beneficiary.villageName!.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 17,
-                      color: Colors.blueGrey,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        beneficiary.villageName!,
-                        style: const TextStyle(
-                          color: Color(0xFF5D6D64),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.description_outlined,
-                    size: 17,
-                    color: Colors.blueGrey,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Applications: ${beneficiary.applicationCount}',
-                      style: const TextStyle(
-                        color: Color(0xFF5D6D64),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  const Text(
-                    'View details',
-                    style: TextStyle(
-                      color: green,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -847,8 +759,8 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 6,
+        horizontal: 9,
+        vertical: 4,
       ),
       decoration: BoxDecoration(
         color: fill,
