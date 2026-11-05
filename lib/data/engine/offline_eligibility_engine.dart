@@ -845,16 +845,22 @@ class OfflineEligibilityEngine {
             'frequency': scheme['benefit_frequency'],
           };
 
+    final appUrl = scheme['application_url'] ?? scheme['portal_url'];
     final application = scheme['application'] is Map
         ? Map<String, dynamic>.from(scheme['application'])
         : {
             'mode': scheme['application_mode'],
             'process': scheme['application_process'],
-            'portal_url': scheme['portal_url'],
+            'portal_url': appUrl,
+            'application_url': appUrl,
             'source_url': scheme['source_url'],
             'source_website': scheme['source_website'],
             'helpline_number': scheme['helpline_number'],
           };
+    if (appUrl != null) {
+      application['application_url'] ??= appUrl;
+      application['portal_url'] ??= appUrl;
+    }
 
     final passedReasons = (outcome['passed_reasons'] as List? ?? [])
         .map((r) => r is Map ? (r['message'] ?? r.toString()) : r.toString())

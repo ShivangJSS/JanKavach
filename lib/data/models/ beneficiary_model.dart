@@ -13,6 +13,13 @@ class BeneficiaryModel {
   final int? gramPanchayatId;
   final int? villageId;
   final String? villageName;
+  final bool? sameAsPermanentAddress;
+  final int? currentStateId;
+  final int? currentDistrictId;
+  final int? currentBlockId;
+  final int? currentGramPanchayatId;
+  final int? currentVillageId;
+  final String? currentVillageName;
   final String? recordStatus;
   final String? assessmentStatus;
   final String? registrationDate;
@@ -33,6 +40,13 @@ class BeneficiaryModel {
     this.gramPanchayatId,
     this.villageId,
     this.villageName,
+    this.sameAsPermanentAddress,
+    this.currentStateId,
+    this.currentDistrictId,
+    this.currentBlockId,
+    this.currentGramPanchayatId,
+    this.currentVillageId,
+    this.currentVillageName,
     this.recordStatus,
     this.assessmentStatus,
     this.registrationDate,
@@ -68,6 +82,13 @@ class BeneficiaryModel {
       gramPanchayatId: parseInt(json['gram_panchayat_id']),
       villageId: parseInt(json['village_id']),
       villageName: parseString(json['village_name']),
+      sameAsPermanentAddress: json['same_as_permanent_address'] == true,
+      currentStateId: parseInt(json['current_state_id']),
+      currentDistrictId: parseInt(json['current_district_id']),
+      currentBlockId: parseInt(json['current_block_id']),
+      currentGramPanchayatId: parseInt(json['current_gram_panchayat_id']),
+      currentVillageId: parseInt(json['current_village_id']),
+      currentVillageName: parseString(json['current_village_name']),
       recordStatus: parseString(json['record_status']),
       assessmentStatus: parseString(json['assessment_status']),
       registrationDate: parseString(json['registration_date']),
@@ -91,6 +112,13 @@ class BeneficiaryModel {
       'gram_panchayat_id': gramPanchayatId,
       'village_id': villageId,
       'village_name': villageName,
+      'same_as_permanent_address': sameAsPermanentAddress,
+      'current_state_id': currentStateId,
+      'current_district_id': currentDistrictId,
+      'current_block_id': currentBlockId,
+      'current_gram_panchayat_id': currentGramPanchayatId,
+      'current_village_id': currentVillageId,
+      'current_village_name': currentVillageName,
       'record_status': recordStatus,
       'assessment_status': assessmentStatus,
       'registration_date': registrationDate,

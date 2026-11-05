@@ -19,6 +19,7 @@ class SchemeModel {
   final String? benefitAmountText;
   final String? applicationMode;
   final String? portalUrl;
+  final String? applicationUrl;
   final String? sourceUrl;
 
   const SchemeModel({
@@ -41,6 +42,7 @@ class SchemeModel {
     this.benefitAmountText,
     this.applicationMode,
     this.portalUrl,
+    this.applicationUrl,
     this.sourceUrl,
   });
 
@@ -76,9 +78,15 @@ class SchemeModel {
       benefitAmount: benefit['amount'] as num?,
       benefitAmountText: benefit['amount_text']?.toString(),
       applicationMode: json['application_mode']?.toString(),
-      portalUrl: json['portal_url']?.toString(),
+      portalUrl: (json['portal_url'] ?? json['application_url'])?.toString(),
+      applicationUrl: (json['application_url'] ?? json['portal_url'])?.toString(),
       sourceUrl: json['source_url']?.toString(),
     );
+  }
+
+  bool get isOnline {
+    final mode = (applicationMode ?? '').trim().toLowerCase();
+    return mode == 'online' || mode == 'both';
   }
 
   Map<String, dynamic> toJson() {
@@ -109,7 +117,8 @@ class SchemeModel {
         'amount_text': benefitAmountText,
       },
       'application_mode': applicationMode,
-      'portal_url': portalUrl,
+      'portal_url': portalUrl ?? applicationUrl,
+      'application_url': applicationUrl ?? portalUrl,
       'source_url': sourceUrl,
     };
   }

@@ -42,6 +42,25 @@ class _BeneficiaryRegistrationScreenState
   bool _loadingGramPanchayats = false;
   bool _loadingVillages = false;
 
+  // Current Address State Variables
+  List<LocationModel> _currentDistricts = [];
+  List<LocationModel> _currentBlocks = [];
+  List<LocationModel> _currentGramPanchayats = [];
+  List<LocationModel> _currentVillages = [];
+
+  int? _currentSelectedStateId;
+  int? _currentSelectedDistrictId;
+  int? _currentSelectedBlockId;
+  int? _currentSelectedGramPanchayatId;
+  int? _currentSelectedVillageId;
+
+  bool _loadingCurrentDistricts = false;
+  bool _loadingCurrentBlocks = false;
+  bool _loadingCurrentGramPanchayats = false;
+  bool _loadingCurrentVillages = false;
+
+  bool _sameAsPermanentAddress = false;
+
   bool _isSubmitting = false;
   final BeneficiaryLocalDao _localDao = BeneficiaryLocalDao();
 
@@ -65,7 +84,8 @@ class _BeneficiaryRegistrationScreenState
 
   final List<String> _stepTitles = [
     'Beneficiary Details',
-    'Address',
+    'Permanent Address',
+    'Current Address',
     'Identity & Citizenship',
     'Livelihood & Documents',
     'Financial Inclusion',
@@ -78,6 +98,7 @@ class _BeneficiaryRegistrationScreenState
     'Gender': ['Male', 'Female', 'Other'],
 
     'Rural / Urban': ['Rural', 'Urban'],
+    'Current Rural / Urban': ['Rural', 'Urban'],
     'Category': ['Not recorded', 'General', 'SC', 'ST', 'OBC', 'Other'],
     'Marital Status': [
       'Not recorded',
@@ -198,13 +219,20 @@ class _BeneficiaryRegistrationScreenState
           ..addAll(vulnerabilities);
 
         _step = (formState['current_step'] as num?)?.toInt() ?? 0;
-        _step = _step.clamp(0, 5);
+        _step = _step.clamp(0, _stepTitles.length - 1);
 
         _selectedStateId = readId('selected_state_id');
         _selectedDistrictId = readId('selected_district_id');
         _selectedBlockId = readId('selected_block_id');
         _selectedGramPanchayatId = readId('selected_gram_panchayat_id');
         _selectedVillageId = readId('selected_village_id');
+
+        _sameAsPermanentAddress = formState['same_as_permanent_address'] == true;
+        _currentSelectedStateId = readId('current_selected_state_id');
+        _currentSelectedDistrictId = readId('current_selected_district_id');
+        _currentSelectedBlockId = readId('current_selected_block_id');
+        _currentSelectedGramPanchayatId = readId('current_selected_gram_panchayat_id');
+        _currentSelectedVillageId = readId('current_selected_village_id');
 
         // Enforce user assigned jurisdiction if available
         if (_assignedLocation?.hasAssignedState == true) {
@@ -236,6 +264,26 @@ class _BeneficiaryRegistrationScreenState
       if (_selectedGramPanchayatId != null) {
         _villages = await _geographyService.getVillages(
           _selectedGramPanchayatId!,
+        );
+      }
+
+      if (_currentSelectedStateId != null) {
+        _currentDistricts = await _geographyService.getDistricts(_currentSelectedStateId!);
+      }
+
+      if (_currentSelectedDistrictId != null) {
+        _currentBlocks = await _geographyService.getBlocks(_currentSelectedDistrictId!);
+      }
+
+      if (_currentSelectedBlockId != null) {
+        _currentGramPanchayats = await _geographyService.getGramPanchayats(
+          _currentSelectedBlockId!,
+        );
+      }
+
+      if (_currentSelectedGramPanchayatId != null) {
+        _currentVillages = await _geographyService.getVillages(
+          _currentSelectedGramPanchayatId!,
         );
       }
 
@@ -522,6 +570,233 @@ class _BeneficiaryRegistrationScreenState
     _scheduleDraftSave();
   }
 
+  // Current Address Handlers
+  Future<void> _onCurrentStateChanged(int? stateId) async {
+    setState(() {
+      _currentSelectedStateId = stateId;
+      _currentSelectedDistrictId = null;
+      _currentSelectedBlockId = null;
+      _currentSelectedGramPanchayatId = null;
+      _currentSelectedVillageId = null;
+
+      _currentDistricts = [];
+      _currentBlocks = [];
+      _currentGramPanchayats = [];
+      _currentVillages = [];
+    });
+
+    _scheduleDraftSave();
+
+    if (stateId == null) return;
+
+    setState(() => _loadingCurrentDistricts = true);
+
+    try {
+      final locations = await _geographyService.getDistricts(stateId);
+      if (!mounted) return;
+      setState(() => _currentDistricts = locations);
+    } catch (e) {
+      debugPrint('Loading current districts failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _loadingCurrentDistricts = false);
+      }
+    }
+  }
+
+  Future<void> _onCurrentDistrictChanged(int? districtId) async {
+    setState(() {
+      _currentSelectedDistrictId = districtId;
+      _currentSelectedBlockId = null;
+      _currentSelectedGramPanchayatId = null;
+      _currentSelectedVillageId = null;
+      _currentBlocks = [];
+      _currentGramPanchayats = [];
+      _currentVillages = [];
+    });
+
+    _scheduleDraftSave();
+
+    if (districtId == null) return;
+
+    setState(() => _loadingCurrentBlocks = true);
+    try {
+      final locations = await _geographyService.getBlocks(districtId);
+      if (!mounted) return;
+      setState(() => _currentBlocks = locations);
+    } catch (e) {
+      debugPrint('Loading current blocks failed: $e');
+    } finally {
+      if (mounted) setState(() => _loadingCurrentBlocks = false);
+    }
+  }
+
+  Future<void> _onCurrentBlockChanged(int? blockId) async {
+    setState(() {
+      _currentSelectedBlockId = blockId;
+      _currentSelectedGramPanchayatId = null;
+      _currentSelectedVillageId = null;
+      _currentGramPanchayats = [];
+      _currentVillages = [];
+    });
+
+    _scheduleDraftSave();
+
+    if (blockId == null) return;
+
+    setState(() => _loadingCurrentGramPanchayats = true);
+    try {
+      final locations = await _geographyService.getGramPanchayats(blockId);
+      if (!mounted) return;
+      setState(() => _currentGramPanchayats = locations);
+      if (locations.isEmpty) {
+        final vils = await _geographyService.getVillagesByBlock(blockId);
+        if (mounted && vils.isNotEmpty) {
+          setState(() => _currentVillages = vils);
+        }
+      }
+    } catch (e) {
+      debugPrint('Loading current gram panchayats failed: $e');
+    } finally {
+      if (mounted) setState(() => _loadingCurrentGramPanchayats = false);
+    }
+  }
+
+  Future<void> _onCurrentGramPanchayatChanged(int? gpId) async {
+    setState(() {
+      _currentSelectedGramPanchayatId = gpId;
+      _currentSelectedVillageId = null;
+      _currentVillages = [];
+    });
+
+    _scheduleDraftSave();
+
+    if (gpId == null) {
+      if (_currentSelectedBlockId != null) {
+        final vils = await _geographyService.getVillagesByBlock(_currentSelectedBlockId!);
+        if (mounted && vils.isNotEmpty) {
+          setState(() => _currentVillages = vils);
+        }
+      }
+      return;
+    }
+
+    setState(() => _loadingCurrentVillages = true);
+    try {
+      final locations = await _geographyService.getVillages(gpId);
+      if (!mounted) return;
+      if (locations.isNotEmpty) {
+        setState(() => _currentVillages = locations);
+      } else if (_currentSelectedBlockId != null) {
+        final vils = await _geographyService.getVillagesByBlock(_currentSelectedBlockId!);
+        if (mounted && vils.isNotEmpty) {
+          setState(() => _currentVillages = vils);
+        }
+      }
+    } catch (e) {
+      debugPrint('Loading current villages failed: $e');
+    } finally {
+      if (mounted) setState(() => _loadingCurrentVillages = false);
+    }
+  }
+
+  void _onCurrentVillageChanged(int? villageId) {
+    setState(() {
+      _currentSelectedVillageId = villageId;
+
+      final village = _currentVillages
+          .where((item) => item.id == villageId)
+          .firstOrNull;
+
+      if (village != null) {
+        _values['Current Village'] = village.name;
+        _values['Current Rural / Urban'] = village.areaType ?? 'Rural';
+
+        if (village.pincode != null) {
+          _values['Current PIN Code'] = village.pincode!;
+          _controller('Current PIN Code').text = village.pincode!;
+        }
+      } else {
+        _values.remove('Current Village');
+      }
+    });
+    _scheduleDraftSave();
+  }
+
+  void _copyPermanentToCurrent() {
+    _currentSelectedStateId = _selectedStateId;
+    _currentDistricts = List.from(_districts);
+    _currentSelectedDistrictId = _selectedDistrictId;
+    _currentBlocks = List.from(_blocks);
+    _currentSelectedBlockId = _selectedBlockId;
+    _currentGramPanchayats = List.from(_gramPanchayats);
+    _currentSelectedGramPanchayatId = _selectedGramPanchayatId;
+    _currentVillages = List.from(_villages);
+    _currentSelectedVillageId = _selectedVillageId;
+
+    _values['Current Village'] = _value('Village');
+
+    _controller('Current Village (if not listed)').text =
+        _controller('Village (if not listed)').text;
+    _values['Current Village (if not listed)'] =
+        _value('Village (if not listed)');
+
+    _controller('Current Post Office').text =
+        _controller('Post Office').text;
+    _values['Current Post Office'] = _value('Post Office');
+
+    _controller('Current Address').text = _controller('Address').text;
+    _values['Current Address'] = _value('Address');
+
+    _controller('Current PIN Code').text = _controller('PIN Code').text;
+    _values['Current PIN Code'] = _value('PIN Code');
+
+    final ruralUrban = _values['Rural / Urban'];
+    if (ruralUrban != null) {
+      _values['Current Rural / Urban'] = ruralUrban;
+    }
+  }
+
+  Future<void> _toggleSameAsPermanent(bool isSame) async {
+    setState(() {
+      _sameAsPermanentAddress = isSame;
+    });
+
+    if (isSame) {
+      setState(() {
+        _copyPermanentToCurrent();
+      });
+
+      // Ensure dependent lists are loaded if they weren't already
+      if (_currentSelectedStateId != null && _currentDistricts.isEmpty) {
+        final dists = await _geographyService.getDistricts(_currentSelectedStateId!);
+        if (mounted && _sameAsPermanentAddress) {
+          setState(() => _currentDistricts = dists);
+        }
+      }
+      if (_currentSelectedDistrictId != null && _currentBlocks.isEmpty) {
+        final blks = await _geographyService.getBlocks(_currentSelectedDistrictId!);
+        if (mounted && _sameAsPermanentAddress) {
+          setState(() => _currentBlocks = blks);
+        }
+      }
+      if (_currentSelectedBlockId != null && _currentGramPanchayats.isEmpty) {
+        final gps = await _geographyService.getGramPanchayats(_currentSelectedBlockId!);
+        if (mounted && _sameAsPermanentAddress) {
+          setState(() => _currentGramPanchayats = gps);
+        }
+      }
+      if (_currentSelectedGramPanchayatId != null && _currentVillages.isEmpty) {
+        final vils = await _geographyService.getVillages(_currentSelectedGramPanchayatId!);
+        if (mounted && _sameAsPermanentAddress) {
+          setState(() => _currentVillages = vils);
+        }
+      }
+    }
+
+    _scheduleDraftSave();
+  }
+
   @override
   void dispose() {
     _draftSaveTimer?.cancel();
@@ -562,6 +837,34 @@ class _BeneficiaryRegistrationScreenState
       final match = _villages.where((item) => item.id == _selectedVillageId);
       if (match.isNotEmpty) return match.first.name;
       if (_selectedVillageId != null) return 'Village #$_selectedVillageId';
+    }
+    if (label == 'Same as permanent address') {
+      return _sameAsPermanentAddress ? 'Yes' : 'No';
+    }
+    if (label == 'Current State') {
+      final match = _states.where((item) => item.id == _currentSelectedStateId);
+      if (match.isNotEmpty) return match.first.name;
+      if (_currentSelectedStateId != null) return 'State #$_currentSelectedStateId';
+    }
+    if (label == 'Current District') {
+      final match = _currentDistricts.where((item) => item.id == _currentSelectedDistrictId);
+      if (match.isNotEmpty) return match.first.name;
+      if (_currentSelectedDistrictId != null) return 'District #$_currentSelectedDistrictId';
+    }
+    if (label == 'Current Block') {
+      final match = _currentBlocks.where((item) => item.id == _currentSelectedBlockId);
+      if (match.isNotEmpty) return match.first.name;
+      if (_currentSelectedBlockId != null) return 'Block #$_currentSelectedBlockId';
+    }
+    if (label == 'Current Gram Panchayat') {
+      final match = _currentGramPanchayats.where((item) => item.id == _currentSelectedGramPanchayatId);
+      if (match.isNotEmpty) return match.first.name;
+      if (_currentSelectedGramPanchayatId != null) return 'GP #$_currentSelectedGramPanchayatId';
+    }
+    if (label == 'Current Village') {
+      final match = _currentVillages.where((item) => item.id == _currentSelectedVillageId);
+      if (match.isNotEmpty) return match.first.name;
+      if (_currentSelectedVillageId != null) return 'Village #$_currentSelectedVillageId';
     }
     return _values[label] ?? _controllers[label]?.text ?? '';
   }
@@ -615,6 +918,12 @@ class _BeneficiaryRegistrationScreenState
         'selected_block_id': _selectedBlockId,
         'selected_gram_panchayat_id': _selectedGramPanchayatId,
         'selected_village_id': _selectedVillageId,
+        'same_as_permanent_address': _sameAsPermanentAddress,
+        'current_selected_state_id': _currentSelectedStateId,
+        'current_selected_district_id': _currentSelectedDistrictId,
+        'current_selected_block_id': _currentSelectedBlockId,
+        'current_selected_gram_panchayat_id': _currentSelectedGramPanchayatId,
+        'current_selected_village_id': _currentSelectedVillageId,
         'current_step': _step,
       },
       // Keep the final API payload alongside the editable form state.
@@ -669,14 +978,17 @@ class _BeneficiaryRegistrationScreenState
 
   Widget _textField(
     String label, {
+    String? displayLabel,
     bool required = false,
     String? hint,
     TextInputType keyboardType = TextInputType.text,
     bool onlyAlphabets = false,
     List<TextInputFormatter>? inputFormatters,
     int? maxLength,
+    bool readOnly = false,
     String? Function(String?)? validator,
   }) {
+    final effectiveLabel = displayLabel ?? label;
     final formatters = <TextInputFormatter>[
       if (onlyAlphabets)
         FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Zs]')),
@@ -688,27 +1000,32 @@ class _BeneficiaryRegistrationScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _fieldLabel(label, required),
+          _fieldLabel(effectiveLabel, required),
           const SizedBox(height: 6),
           TextFormField(
             controller: _controller(label),
+            readOnly: readOnly,
             keyboardType: keyboardType,
             inputFormatters: formatters.isNotEmpty ? formatters : null,
             maxLength: maxLength,
             buildCounter: maxLength != null
                 ? (context, {required currentLength, required isFocused, maxLength}) => null
                 : null,
-            decoration: _inputDecoration(hint ?? 'Enter $label'),
+            decoration: _inputDecoration(hint ?? 'Enter $effectiveLabel').copyWith(
+              filled: readOnly,
+              fillColor: readOnly ? const Color(0xFFF7FAF8) : Colors.white,
+            ),
             onChanged: (_) => _scheduleDraftSave(),
             validator: validator ??
                 (value) {
+                  if (readOnly) return null;
                   final trimmed = value?.trim() ?? '';
                   if (required && trimmed.isEmpty) {
-                    return 'Please enter $label';
+                    return 'Please enter $effectiveLabel';
                   }
                   if (trimmed.isNotEmpty && onlyAlphabets) {
                     if (!RegExp(r'^[a-zA-Zs]+$').hasMatch(trimmed)) {
-                      return '$label must contain only alphabetical characters';
+                      return '$effectiveLabel must contain only alphabetical characters';
                     }
                   }
                   return null;
@@ -918,9 +1235,12 @@ class _BeneficiaryRegistrationScreenState
 
   Widget _dropdown(
     String label, {
+    String? displayLabel,
     bool required = false,
     List<String>? choices,
+    bool disabled = false,
   }) {
+    final effectiveLabel = displayLabel ?? label;
     final items = choices ?? _options[label] ?? [];
     final selected = _values[label];
     final validValue = selected != null && items.contains(selected)
@@ -932,12 +1252,15 @@ class _BeneficiaryRegistrationScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _fieldLabel(label, required),
+          _fieldLabel(effectiveLabel, required),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
             value: validValue,
             isExpanded: true,
-            decoration: _inputDecoration('Select $label'),
+            decoration: _inputDecoration('Select $effectiveLabel').copyWith(
+              filled: disabled,
+              fillColor: disabled ? const Color(0xFFF7FAF8) : Colors.white,
+            ),
             items: items
                 .map(
                   (item) => DropdownMenuItem<String>(
@@ -945,29 +1268,39 @@ class _BeneficiaryRegistrationScreenState
                     child: Text(
                       item,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: disabled ? FontWeight.w600 : FontWeight.normal,
+                        color: disabled ? const Color(0xFF1E293B) : null,
+                      ),
                     ),
                   ),
                 )
                 .toList(),
-            onChanged: (value) {
-              setState(() {
-                if (value == null) {
-                  _values.remove(label);
-                } else {
-                  _values[label] = value;
-                  if (label == 'Do you earn?' && value != 'Yes') {
-                    _values.remove('Occupation');
-                    _values.remove('What is your monthly income?');
-                  }
-                }
-              });
+            onChanged: disabled
+                ? null
+                : (value) {
+                    setState(() {
+                      if (value == null) {
+                        _values.remove(label);
+                      } else {
+                        _values[label] = value;
+                        if (label == 'Do you earn?' && value != 'Yes') {
+                          _values.remove('Occupation');
+                          _values.remove('What is your monthly income?');
+                        }
+                      }
+                    });
 
-              _scheduleDraftSave();
+                    _scheduleDraftSave();
+                  },
+            validator: (value) {
+              if (disabled) return null;
+              if (required && value == null) {
+                return 'Please select $effectiveLabel';
+              }
+              return null;
             },
-            validator: required
-                ? (value) => value == null ? 'Please select $label' : null
-                : null,
           ),
         ],
       ),
@@ -976,13 +1309,16 @@ class _BeneficiaryRegistrationScreenState
 
   Widget _locationDropdown({
     required String label,
+    String? displayLabel,
     required List<LocationModel> locations,
     required int? selectedId,
     required bool loading,
     required ValueChanged<int?> onChanged,
     bool required = false,
     bool isLocked = false,
+    bool disabled = false,
   }) {
+    final effectiveLabel = displayLabel ?? label;
     final validIds = locations.map((item) => item.id).toSet();
     final effectiveLocations = List<LocationModel>.from(locations);
 
@@ -990,12 +1326,13 @@ class _BeneficiaryRegistrationScreenState
       effectiveLocations.add(
         LocationModel(
           id: selectedId,
-          name: isLocked ? 'Assigned $label (ID: $selectedId)' : 'Location #$selectedId',
+          name: isLocked ? 'Assigned $effectiveLabel (ID: $selectedId)' : 'Location #$selectedId',
         ),
       );
     }
 
     final isActuallyLocked = isLocked && selectedId != null;
+    final isActuallyDisabled = disabled || isActuallyLocked;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -1004,7 +1341,7 @@ class _BeneficiaryRegistrationScreenState
         children: [
           Row(
             children: [
-              _fieldLabel(label, required),
+              _fieldLabel(effectiveLabel, required),
               if (isActuallyLocked) ...[
                 const SizedBox(width: 8),
                 Container(
@@ -1038,10 +1375,10 @@ class _BeneficiaryRegistrationScreenState
             value: effectiveLocations.any((item) => item.id == selectedId) ? selectedId : null,
             isExpanded: true,
             decoration: _inputDecoration(
-              loading ? 'Loading $label...' : 'Select $label',
+              loading ? 'Loading $effectiveLabel...' : 'Select $effectiveLabel',
             ).copyWith(
-              filled: isActuallyLocked,
-              fillColor: isActuallyLocked ? const Color(0xFFF9FDF9) : null,
+              filled: isActuallyDisabled,
+              fillColor: isActuallyDisabled ? const Color(0xFFF7FAF8) : null,
               suffixIcon: isActuallyLocked
                   ? const Tooltip(
                       message: 'This field is locked to your allocated jurisdiction',
@@ -1057,19 +1394,20 @@ class _BeneficiaryRegistrationScreenState
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: isActuallyLocked ? FontWeight.w600 : FontWeight.normal,
-                    color: isActuallyLocked ? const Color(0xFF1E293B) : null,
+                    fontWeight: isActuallyDisabled ? FontWeight.w600 : FontWeight.normal,
+                    color: isActuallyDisabled ? const Color(0xFF1E293B) : null,
                   ),
                 ),
               );
             }).toList(),
-            onChanged: (loading || isActuallyLocked) ? null : onChanged,
+            onChanged: (loading || isActuallyDisabled) ? null : onChanged,
             validator: (value) {
+              if (isActuallyDisabled) return null;
               if (required && value == null) {
-                return 'Please select $label';
+                return 'Please select $effectiveLabel';
               }
               if (isActuallyLocked && value != selectedId) {
-                return 'You can only register beneficiaries in your assigned $label';
+                return 'You can only register beneficiaries in your assigned $effectiveLabel';
               }
               return null;
             },
@@ -1250,8 +1588,8 @@ class _BeneficiaryRegistrationScreenState
 
   Widget _buildStep2() {
     return _section(
-      'Address',
-      Icons.location_on_outlined,
+      'Permanent Address',
+      Icons.home_outlined,
       Column(
         children: [
           _locationDropdown(
@@ -1306,6 +1644,135 @@ class _BeneficiaryRegistrationScreenState
   }
 
   Widget _buildStep3() {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: _sameAsPermanentAddress ? const Color(0xFFF0FDF4) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _sameAsPermanentAddress ? green : const Color(0xFFE5EEE8),
+              width: _sameAsPermanentAddress ? 1.4 : 1.0,
+            ),
+          ),
+          child: CheckboxListTile(
+            value: _sameAsPermanentAddress,
+            onChanged: (bool? checked) {
+              _toggleSameAsPermanent(checked == true);
+            },
+            activeColor: green,
+            checkColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            controlAffinity: ListTileControlAffinity.leading,
+            title: const Text(
+              'Same as permanent address',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF182E25),
+              ),
+            ),
+            subtitle: const Text(
+              'Copy address details filled in the previous step',
+              style: TextStyle(
+                fontSize: 11,
+                color: Color(0xFF5A6B62),
+              ),
+            ),
+          ),
+        ),
+        _section(
+          'Current Address',
+          Icons.pin_drop_outlined,
+          Column(
+            children: [
+              _locationDropdown(
+                label: 'Current State',
+                displayLabel: 'State',
+                locations: _states,
+                selectedId: _currentSelectedStateId,
+                loading: _loadingStates,
+                required: !_sameAsPermanentAddress,
+                disabled: _sameAsPermanentAddress,
+                onChanged: _onCurrentStateChanged,
+              ),
+              _locationDropdown(
+                label: 'Current District',
+                displayLabel: 'District',
+                locations: _currentDistricts,
+                selectedId: _currentSelectedDistrictId,
+                loading: _loadingCurrentDistricts,
+                required: !_sameAsPermanentAddress,
+                disabled: _sameAsPermanentAddress,
+                onChanged: _onCurrentDistrictChanged,
+              ),
+              _locationDropdown(
+                label: 'Current Block',
+                displayLabel: 'Block',
+                locations: _currentBlocks,
+                selectedId: _currentSelectedBlockId,
+                loading: _loadingCurrentBlocks,
+                disabled: _sameAsPermanentAddress,
+                onChanged: _onCurrentBlockChanged,
+              ),
+              _locationDropdown(
+                label: 'Current Gram Panchayat',
+                displayLabel: 'Gram Panchayat',
+                locations: _currentGramPanchayats,
+                selectedId: _currentSelectedGramPanchayatId,
+                loading: _loadingCurrentGramPanchayats,
+                disabled: _sameAsPermanentAddress,
+                onChanged: _onCurrentGramPanchayatChanged,
+              ),
+              _locationDropdown(
+                label: 'Current Village',
+                displayLabel: 'Village',
+                locations: _currentVillages,
+                selectedId: _currentSelectedVillageId,
+                loading: _loadingCurrentVillages,
+                disabled: _sameAsPermanentAddress,
+                onChanged: _onCurrentVillageChanged,
+              ),
+              _textField(
+                'Current Village (if not listed)',
+                displayLabel: 'Village (if not listed)',
+                readOnly: _sameAsPermanentAddress,
+              ),
+              _textField(
+                'Current Post Office',
+                displayLabel: 'Post Office',
+                readOnly: _sameAsPermanentAddress,
+              ),
+              _textField(
+                'Current Address',
+                displayLabel: 'Address',
+                hint: 'Enter full address',
+                readOnly: _sameAsPermanentAddress,
+              ),
+              _textField(
+                'Current PIN Code',
+                displayLabel: 'PIN Code',
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                maxLength: 6,
+                readOnly: _sameAsPermanentAddress,
+              ),
+              _dropdown(
+                'Current Rural / Urban',
+                displayLabel: 'Rural / Urban',
+                required: !_sameAsPermanentAddress,
+                disabled: _sameAsPermanentAddress,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep4() {
     return Column(
       children: [
         _section(
@@ -1380,7 +1847,7 @@ class _BeneficiaryRegistrationScreenState
     );
   }
 
-  Widget _buildStep4() {
+  Widget _buildStep5() {
     const documentFields = [
       'Aadhaar Card',
       'PAN Card',
@@ -1437,7 +1904,7 @@ class _BeneficiaryRegistrationScreenState
     );
   }
 
-  Widget _buildStep5() {
+  Widget _buildStep6() {
     return Column(
       children: [
         _section(
@@ -1537,7 +2004,7 @@ class _BeneficiaryRegistrationScreenState
     );
   }
 
-  Widget _buildStep6() {
+  Widget _buildStep7() {
     return Column(
       children: [
         const Text(
@@ -1560,7 +2027,7 @@ class _BeneficiaryRegistrationScreenState
           'Alternate Mobile',
           'Aadhaar Number',
         ], Icons.person_outline),
-        _reviewSection('Address', [
+        _reviewSection('Permanent Address', [
           'State',
           'District',
           'Block',
@@ -1571,7 +2038,20 @@ class _BeneficiaryRegistrationScreenState
           'Address',
           'PIN Code',
           'Rural / Urban',
-        ], Icons.location_on_outlined),
+        ], Icons.home_outlined),
+        _reviewSection('Current Address', [
+          'Same as permanent address',
+          'Current State',
+          'Current District',
+          'Current Block',
+          'Current Gram Panchayat',
+          'Current Village',
+          'Current Village (if not listed)',
+          'Current Post Office',
+          'Current Address',
+          'Current PIN Code',
+          'Current Rural / Urban',
+        ], Icons.pin_drop_outlined),
         _reviewSection('Identity & Citizenship', [
           'Are you an Indian Citizen?',
           'Category',
@@ -1615,7 +2095,7 @@ class _BeneficiaryRegistrationScreenState
               style: const TextStyle(fontSize: 12),
             ),
             trailing: TextButton(
-              onPressed: () => setState(() => _step = 4),
+              onPressed: () => setState(() => _step = 5),
               child: const Text('Edit'),
             ),
           ),
@@ -1708,7 +2188,33 @@ class _BeneficiaryRegistrationScreenState
       }
     }
 
-    if (_step == 5) {
+    if (_step == 2) {
+      if (!_sameAsPermanentAddress) {
+        if (_currentSelectedStateId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please select Current State.')),
+          );
+          return false;
+        }
+        if (_currentSelectedDistrictId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please select Current District.')),
+          );
+          return false;
+        }
+      }
+    }
+
+    if (_step == 5 && _vulnerabilities.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select at least one vulnerability group.'),
+        ),
+      );
+      return false;
+    }
+
+    if (_step == 6) {
       if (!(_switches['Confirmation'] ?? false)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1728,22 +2234,17 @@ class _BeneficiaryRegistrationScreenState
       return true;
     }
 
-    if (_step == 4 && _vulnerabilities.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one vulnerability group.'),
-        ),
-      );
-      return false;
-    }
-
     return _formKey.currentState?.validate() ?? true;
   }
 
   Future<void> _next() async {
     if (!_validateCurrentStep()) return;
 
-    if (_step < 5) {
+    if (_step == 1 && _sameAsPermanentAddress) {
+      _copyPermanentToCurrent();
+    }
+
+    if (_step < _stepTitles.length - 1) {
       setState(() => _step++);
 
       await _saveDraftNow();
@@ -1991,6 +2492,17 @@ class _BeneficiaryRegistrationScreenState
       if (vulnCodes.contains('MINORITY')) 'is_minority': 1,
       if (vulnCodes.contains('MIGRANT')) 'is_migrant': 1,
       if (earningStatusCode == 'NO' || monthlyIncomeBand == 'NO_INCOME') 'annual_income': 0,
+
+      // Current Address in answers
+      'same_as_permanent_address': _sameAsPermanentAddress ? 'Yes' : 'No',
+      'current_state': _sameAsPermanentAddress ? _value('State') : _value('Current State'),
+      'current_district': _sameAsPermanentAddress ? _value('District') : _value('Current District'),
+      'current_block': _sameAsPermanentAddress ? _value('Block') : _value('Current Block'),
+      'current_gram_panchayat': _sameAsPermanentAddress ? _value('Gram Panchayat') : _value('Current Gram Panchayat'),
+      'current_village': _sameAsPermanentAddress ? _value('Village') : _value('Current Village'),
+      'current_address_line': _sameAsPermanentAddress ? cleanString('Address') : cleanString('Current Address'),
+      'current_pincode': _sameAsPermanentAddress ? cleanDigits('PIN Code') : cleanDigits('Current PIN Code'),
+      'current_area_type': _sameAsPermanentAddress ? cleanString('Rural / Urban') : cleanString('Current Rural / Urban'),
     };
 
     final regDate = _toApiDate(_value('Registration Date')) ??
@@ -2016,7 +2528,7 @@ class _BeneficiaryRegistrationScreenState
       'alt_mobile': cleanDigits('Alternate Mobile'),
       'aadhaar_number': cleanDigits('Aadhaar Number'),
 
-      // Location IDs
+      // Permanent Location IDs & Details
       'state_id': _selectedStateId ?? _assignedLocation?.stateId,
       'district_id': _selectedDistrictId ?? _assignedLocation?.districtId,
       'block_id': _selectedBlockId ?? _assignedLocation?.blockId,
@@ -2029,6 +2541,72 @@ class _BeneficiaryRegistrationScreenState
       'address_line': cleanString('Address'),
       'pincode': cleanDigits('PIN Code'),
       'area_type': cleanString('Rural / Urban'),
+
+      // Current Location IDs & Details
+      'same_as_permanent_address': _sameAsPermanentAddress,
+      'current_state_id': _sameAsPermanentAddress
+          ? (_selectedStateId ?? _assignedLocation?.stateId)
+          : _currentSelectedStateId,
+      'current_district_id': _sameAsPermanentAddress
+          ? (_selectedDistrictId ?? _assignedLocation?.districtId)
+          : _currentSelectedDistrictId,
+      'current_block_id': _sameAsPermanentAddress
+          ? (_selectedBlockId ?? _assignedLocation?.blockId)
+          : _currentSelectedBlockId,
+      'current_gram_panchayat_id': _sameAsPermanentAddress
+          ? _selectedGramPanchayatId
+          : _currentSelectedGramPanchayatId,
+      'current_village_id': _sameAsPermanentAddress
+          ? _selectedVillageId
+          : _currentSelectedVillageId,
+      'current_village_name': _sameAsPermanentAddress
+          ? (cleanString('Village (if not listed)') ?? cleanString('Village'))
+          : (cleanString('Current Village (if not listed)') ?? cleanString('Current Village')),
+      'current_post_office': _sameAsPermanentAddress
+          ? cleanString('Post Office')
+          : cleanString('Current Post Office'),
+      'current_address_line': _sameAsPermanentAddress
+          ? cleanString('Address')
+          : cleanString('Current Address'),
+      'current_pincode': _sameAsPermanentAddress
+          ? cleanDigits('PIN Code')
+          : cleanDigits('Current PIN Code'),
+      'current_area_type': _sameAsPermanentAddress
+          ? cleanString('Rural / Urban')
+          : cleanString('Current Rural / Urban'),
+      'current_address_details': {
+        'same_as_permanent_address': _sameAsPermanentAddress,
+        'state_id': _sameAsPermanentAddress
+            ? (_selectedStateId ?? _assignedLocation?.stateId)
+            : _currentSelectedStateId,
+        'district_id': _sameAsPermanentAddress
+            ? (_selectedDistrictId ?? _assignedLocation?.districtId)
+            : _currentSelectedDistrictId,
+        'block_id': _sameAsPermanentAddress
+            ? (_selectedBlockId ?? _assignedLocation?.blockId)
+            : _currentSelectedBlockId,
+        'gram_panchayat_id': _sameAsPermanentAddress
+            ? _selectedGramPanchayatId
+            : _currentSelectedGramPanchayatId,
+        'village_id': _sameAsPermanentAddress
+            ? _selectedVillageId
+            : _currentSelectedVillageId,
+        'village_name': _sameAsPermanentAddress
+            ? (cleanString('Village (if not listed)') ?? cleanString('Village'))
+            : (cleanString('Current Village (if not listed)') ?? cleanString('Current Village')),
+        'post_office': _sameAsPermanentAddress
+            ? cleanString('Post Office')
+            : cleanString('Current Post Office'),
+        'address_line': _sameAsPermanentAddress
+            ? cleanString('Address')
+            : cleanString('Current Address'),
+        'pincode': _sameAsPermanentAddress
+            ? cleanDigits('PIN Code')
+            : cleanDigits('Current PIN Code'),
+        'area_type': _sameAsPermanentAddress
+            ? cleanString('Rural / Urban')
+            : cleanString('Current Rural / Urban'),
+      },
       if (occupationCode != null) 'occupation': occupationCode,
       if (rawOccupation != null && rawOccupation != 'Not recorded') 'occupation_name': rawOccupation,
       if (monthlyIncomeBand != null) 'monthly_income_band': monthlyIncomeBand,
@@ -2164,7 +2742,7 @@ class _BeneficiaryRegistrationScreenState
       child: Column(
         children: [
           Row(
-            children: List.generate(6, (index) {
+            children: List.generate(_stepTitles.length, (index) {
               final active = index == _step;
               final completed = index < _step;
 
@@ -2211,7 +2789,7 @@ class _BeneficiaryRegistrationScreenState
           ),
           const SizedBox(height: 9),
           Text(
-            '${_step + 1} of 6 • ${_stepTitles[_step]}',
+            '${_step + 1} of ${_stepTitles.length} • ${_stepTitles[_step]}',
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -2235,8 +2813,10 @@ class _BeneficiaryRegistrationScreenState
         return _buildStep4();
       case 4:
         return _buildStep5();
-      default:
+      case 5:
         return _buildStep6();
+      default:
+        return _buildStep7();
     }
   }
 
@@ -2349,14 +2929,14 @@ class _BeneficiaryRegistrationScreenState
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    _step == 5 ? 'Submit Beneficiary' : 'Next',
+                                    _step == _stepTitles.length - 1 ? 'Submit Beneficiary' : 'Next',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Icon(
-                                    _step == 5
+                                    _step == _stepTitles.length - 1
                                         ? Icons.check_circle_outline
                                         : Icons.arrow_forward,
                                     size: 18,

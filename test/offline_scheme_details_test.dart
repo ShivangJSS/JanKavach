@@ -109,5 +109,22 @@ void main() {
       expect(details['benefits'], isA<List>());
       expect(details['application'], isA<Map>());
     });
+
+    test('normalizes both source_url and application_url correctly for online schemes', () {
+      final raw = {
+        'id': 9998,
+        'scheme_code': 'JK-SCH-9998',
+        'name': 'Online Digital Portal Scheme',
+        'application_mode': 'Online',
+        'application_url': 'https://apply.scheme.gov.in/form',
+        'source_url': 'https://scheme.gov.in',
+      };
+
+      final normalized = repository.normalizeSchemeDetails(raw);
+      expect(normalized['application']['mode'], equals('Online'));
+      expect(normalized['application']['application_url'], equals('https://apply.scheme.gov.in/form'));
+      expect(normalized['application']['portal_url'], equals('https://apply.scheme.gov.in/form'));
+      expect(normalized['source']['url'], equals('https://scheme.gov.in'));
+    });
   });
 }

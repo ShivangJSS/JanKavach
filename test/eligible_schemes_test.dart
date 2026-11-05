@@ -258,5 +258,43 @@ void main() {
           .toList();
       expect(remainingWhenNone.length, 3);
     });
+
+    test('EligibleSchemeModel populates application_url and source_url for online scheme', () {
+      final json = {
+        'scheme_id': 201,
+        'scheme_code': 'JK-SCH-0201',
+        'scheme_name': 'E-Kalyan Scholarship Portal',
+        'application_mode': 'Online',
+        'source_url': 'https://ekalyan.cgg.gov.in',
+        'application_url': 'https://ekalyan.cgg.gov.in/applyNow',
+        'eligibility_status': 'Eligible',
+      };
+
+      final scheme = EligibleSchemeModel.fromJson(json);
+      expect(scheme.isOnline, isTrue);
+      expect(scheme.validSourceUrl, equals('https://ekalyan.cgg.gov.in'));
+      expect(scheme.validApplicationUrl, equals('https://ekalyan.cgg.gov.in/applyNow'));
+      expect(scheme.actionUrl, equals('https://ekalyan.cgg.gov.in/applyNow'));
+      expect(scheme.actionLabel, equals('Apply Online'));
+    });
+
+    test('EligibleSchemeModel suppresses application_url for offline scheme', () {
+      final json = {
+        'scheme_id': 202,
+        'scheme_code': 'JK-SCH-0202',
+        'scheme_name': 'Offline Physical Submission Scheme',
+        'application_mode': 'Offline',
+        'source_url': 'https://wcd.nic.in/scheme',
+        'application_url': 'https://wcd.nic.in/not-applicable',
+        'eligibility_status': 'Eligible',
+      };
+
+      final scheme = EligibleSchemeModel.fromJson(json);
+      expect(scheme.isOnline, isFalse);
+      expect(scheme.validSourceUrl, equals('https://wcd.nic.in/scheme'));
+      expect(scheme.validApplicationUrl, isNull);
+      expect(scheme.actionUrl, equals('https://wcd.nic.in/scheme'));
+      expect(scheme.actionLabel, equals('Visit Official Website'));
+    });
   });
 }

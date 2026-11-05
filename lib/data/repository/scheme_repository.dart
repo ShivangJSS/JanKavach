@@ -421,16 +421,21 @@ class SchemeRepository {
         'Offline';
     final appProcess = raw['application_process']?.toString() ??
         bundled?['application_process']?.toString();
-    final portalUrl = raw['portal_url']?.toString() ??
+    final appUrl = raw['application_url']?.toString() ??
+        raw['portal_url']?.toString() ??
+        bundled?['application_url']?.toString() ??
         bundled?['portal_url']?.toString() ??
+        fallbackScheme?.applicationUrl ??
         fallbackScheme?.portalUrl;
+    final portalUrl = appUrl;
     final helpline = raw['helpline_number']?.toString() ??
         bundled?['helpline_number']?.toString();
     final sourceUrl = raw['source_url']?.toString() ??
         bundled?['source_url']?.toString() ??
         fallbackScheme?.sourceUrl;
     final sourceWebsite = raw['source_website']?.toString() ??
-        bundled?['source_website']?.toString();
+        bundled?['source_website']?.toString() ??
+        sourceUrl;
 
     // Eligibility rules from kBundledSchemeRules
     final rules = kBundledSchemeRules
@@ -499,11 +504,16 @@ class SchemeRepository {
         'physical_office': raw['physical_office'],
         'helpline': helpline,
         'portal_url': portalUrl,
+        'application_url': appUrl,
       },
       'source': {
         'url': sourceUrl,
         'website': sourceWebsite,
+        'source_url': sourceUrl,
       },
+      'application_mode': appMode,
+      'application_url': appUrl,
+      'source_url': sourceUrl,
     };
   }
 
