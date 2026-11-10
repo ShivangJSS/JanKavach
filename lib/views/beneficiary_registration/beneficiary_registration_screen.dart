@@ -2442,6 +2442,8 @@ class _BeneficiaryRegistrationScreenState
     final docAay = isDocAvailable('Antyodaya Anna Yojana (AAY) ration card') ? 'Yes' : 'No';
     final docPhh = isDocAvailable('Priority Household (PHH) ration card') ? 'Yes' : 'No';
     final docDisability = isDocAvailable('Disability Card') ? 'Yes' : 'No';
+    final aadhaarClean = cleanDigits('Aadhaar Number');
+    final hasAadhaar = (aadhaarClean != null && aadhaarClean.length == 12) || docAadhaar == 'Yes' ? 1 : 0;
 
     final answers = <String, dynamic>{
       'is_indian_citizen': isIndian ? 'Yes' : 'No',
@@ -2470,12 +2472,13 @@ class _BeneficiaryRegistrationScreenState
       'doc_birth_certificate': docBirth,
       'doc_voter_id': docVoter,
       'doc_death_certificate': docDeath,
-      'has_income_certificate': docIncome,
-      'has_caste_certificate': docCaste,
+      'has_income_certificate': docIncome == 'Yes' ? 1 : 0,
+      'has_caste_certificate': docCaste == 'Yes' ? 1 : 0,
       'doc_ration_aay': docAay,
       'doc_ration_phh': docPhh,
       'doc_disability_card': docDisability,
-      'has_bank_account': hasBank ? 'Yes' : 'No',
+      'has_bank_account': hasBank ? 1 : 0,
+      'has_aadhaar': hasAadhaar,
       'phone_aadhaar_linked': aadhaarLinked ? 'Yes' : 'No',
       'consent_given': ((_switches['Confirmation'] ?? true) && (_switches['PrivacyConsent'] ?? true)) ? 'Yes' : 'No',
       'privacy_consent_given': (_switches['PrivacyConsent'] ?? true) ? 'Yes' : 'No',
@@ -2526,7 +2529,9 @@ class _BeneficiaryRegistrationScreenState
       'age': int.tryParse(_value('Age').trim()),
       'mobile': cleanDigits('Mobile Number'),
       'alt_mobile': cleanDigits('Alternate Mobile'),
-      'aadhaar_number': cleanDigits('Aadhaar Number'),
+      'aadhaar_number': aadhaarClean,
+      'has_aadhaar': hasAadhaar,
+      'has_bank_account': hasBank ? 1 : 0,
 
       // Permanent Location IDs & Details
       'state_id': _selectedStateId ?? _assignedLocation?.stateId,

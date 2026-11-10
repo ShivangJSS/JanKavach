@@ -137,11 +137,80 @@ class OfflineEligibilityEngine {
     }
 
     // 4. Ration card & BPL derivation
-    if (profile['doc_ration_aay'] == 'Yes' || profile['doc_ration_phh'] == 'Yes') {
+    if (profile['doc_ration_aay'] == 'Yes' ||
+        profile['doc_ration_phh'] == 'Yes' ||
+        (profile['ration_card_type'] != null &&
+            profile['ration_card_type'].toString().trim().toUpperCase() != 'NONE' &&
+            profile['ration_card_type'].toString().trim().isNotEmpty)) {
       profile['has_ration_card'] = 1;
       profile['bpl_status'] = 'Yes';
       profile['ration_card_type'] ??=
           (profile['doc_ration_aay'] == 'Yes') ? 'AAY' : 'PHH';
+    } else if (profile['has_ration_card'] != null) {
+      profile['has_ration_card'] = toBool(profile['has_ration_card']) ? 1 : 0;
+    }
+
+    // 4b. Aadhaar normalization & derivation
+    if (profile['has_aadhaar'] == null) {
+      final rawNum = (beneficiary['aadhaar_number'] ??
+              beneficiary['aadhaar_last4'] ??
+              profile['aadhaar_number'])
+          ?.toString()
+          .replaceAll(RegExp(r'\D'), '') ??
+          '';
+      final docAadhaar = (profile['doc_aadhaar'] ??
+              profile['doc_aadhaar_card'] ??
+              beneficiary['doc_aadhaar'])
+          ?.toString()
+          .toLowerCase()
+          .trim();
+      if (rawNum.length == 12 ||
+          rawNum.length == 4 ||
+          docAadhaar == 'yes' ||
+          docAadhaar == 'available' ||
+          profile['phone_aadhaar_linked'] == 'Yes') {
+        profile['has_aadhaar'] = 1;
+      } else if (docAadhaar == 'no') {
+        profile['has_aadhaar'] = 0;
+      }
+    } else {
+      profile['has_aadhaar'] = toBool(profile['has_aadhaar']) ? 1 : 0;
+    }
+
+    // 4c. Bank account normalization
+    if (profile['has_bank_account'] != null) {
+      profile['has_bank_account'] = toBool(profile['has_bank_account']) ? 1 : 0;
+    } else if (beneficiary['has_bank'] == true ||
+        beneficiary['has_bank_account'] == true ||
+        (beneficiary['answers'] is Map &&
+            beneficiary['answers']['has_bank_account'] != null)) {
+      final bVal = beneficiary['has_bank'] ??
+          beneficiary['has_bank_account'] ??
+          (beneficiary['answers'] is Map
+              ? beneficiary['answers']['has_bank_account']
+              : null);
+      profile['has_bank_account'] = toBool(bVal) ? 1 : 0;
+    }
+
+    // 4d. Certificates normalization
+    if (profile['has_income_certificate'] != null) {
+      profile['has_income_certificate'] =
+          toBool(profile['has_income_certificate']) ? 1 : 0;
+    } else if (profile['doc_income'] == 'Yes' ||
+        (beneficiary['answers'] is Map &&
+            beneficiary['answers']['has_income_certificate'] != null)) {
+      profile['has_income_certificate'] = toBool(profile['doc_income'] ??
+          beneficiary['answers']['has_income_certificate']) ? 1 : 0;
+    }
+
+    if (profile['has_caste_certificate'] != null) {
+      profile['has_caste_certificate'] =
+          toBool(profile['has_caste_certificate']) ? 1 : 0;
+    } else if (profile['doc_caste'] == 'Yes' ||
+        (beneficiary['answers'] is Map &&
+            beneficiary['answers']['has_caste_certificate'] != null)) {
+      profile['has_caste_certificate'] = toBool(profile['doc_caste'] ??
+          beneficiary['answers']['has_caste_certificate']) ? 1 : 0;
     }
 
     // 5. Vulnerability groups normalization
@@ -239,6 +308,21 @@ class OfflineEligibilityEngine {
     if (p['ration_card_type'] != null) {
       final card = p['ration_card_type'].toString().trim().toUpperCase();
       p['has_ration_card'] = (card.isNotEmpty && card != 'NONE') ? 1 : 0;
+    } else if (p['has_ration_card'] != null) {
+      p['has_ration_card'] = toBool(p['has_ration_card']) ? 1 : 0;
+    }
+
+    // Aadhaar
+    if (p['has_aadhaar'] != null) {
+      p['has_aadhaar'] = toBool(p['has_aadhaar']) ? 1 : 0;
+    } else if (p['aadhaar_number'] != null &&
+        p['aadhaar_number'].toString().replaceAll(RegExp(r'\D'), '').length == 12) {
+      p['has_aadhaar'] = 1;
+    }
+
+    // Bank Account
+    if (p['has_bank_account'] != null) {
+      p['has_bank_account'] = toBool(p['has_bank_account']) ? 1 : 0;
     }
 
     // Transgender
