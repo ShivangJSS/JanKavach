@@ -156,5 +156,23 @@ void main() {
       // With no rules, it's Needs Verification
       expect(result['eligibility_status'], equals(OfflineEligibilityEngine.verify));
     });
+
+    test('Aadhaar and bank account derivations correctly set has_aadhaar and has_bank_account', () {
+      final beneficiary = {
+        'id': 5,
+        'name': 'Aadhaar Beneficiary',
+        'gender': 'Female',
+        'age': 25,
+        'aadhaar_number': '123456789012',
+        'answers': {
+          'has_bank_account': 'Yes',
+          'doc_aadhaar': 'Yes',
+        },
+      };
+
+      final profile = engine.buildProfile(beneficiary);
+      expect(profile['has_aadhaar'], equals(1));
+      expect(profile['has_bank_account'], equals(1));
+    });
   });
 }
