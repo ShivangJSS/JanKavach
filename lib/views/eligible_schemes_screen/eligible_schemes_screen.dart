@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:kavach/views/eligible_schemes_screen/scheme_details_screen.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../data/models/ beneficiary_model.dart';
 import '../../data/models/eligible_scheme_model.dart';
 import '../../data/services/storage_service.dart';
@@ -218,9 +219,9 @@ class _EligibleSchemesScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Have you applied for any of these?',
-                        style: TextStyle(
+                      Text(
+                        context.tr('eligibility.survey_question'),
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF13422C),
@@ -228,8 +229,7 @@ class _EligibleSchemesScreenState
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Ask ${widget.beneficiaryName} if they have already applied for any of the schemes below. '
-                        'Check the schemes already applied, then tap Submit. Marked schemes will not be tracked for follow-up in the app.',
+                        context.tr('eligibility.survey_subtitle'),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF2E5743),
@@ -247,7 +247,7 @@ class _EligibleSchemesScreenState
           Row(
             children: [
               Text(
-                'Eligible Schemes (${allSchemes.length})',
+                context.tr('eligibility.eligible_schemes_header', args: {'count': '${allSchemes.length}'}),
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -883,6 +883,13 @@ class _EligibleSchemesScreenState
         ? green
         : const Color(0xFF996515);
 
+    String displayLabel = label;
+    if (label == 'Eligible') {
+      displayLabel = context.tr('eligibility.eligible_badge');
+    } else if (label == 'Potentially Eligible') {
+      displayLabel = context.tr('eligibility.potentially_eligible_badge');
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 10,
@@ -895,7 +902,7 @@ class _EligibleSchemesScreenState
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        label,
+        displayLabel,
         style: TextStyle(
           color: color,
           fontSize: 11,
@@ -906,6 +913,12 @@ class _EligibleSchemesScreenState
   }
 
   Widget _smallTag(String label) {
+    String displayLabel = label;
+    if (label.contains('% match')) {
+      final percentVal = label.replaceAll('% match', '').trim();
+      displayLabel = context.tr('eligibility.match_percentage', args: {'percent': percentVal});
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 10,
@@ -916,7 +929,7 @@ class _EligibleSchemesScreenState
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        label,
+        displayLabel,
         style: const TextStyle(
           color: Color(0xFF2457A7),
           fontSize: 11,
@@ -950,7 +963,17 @@ class _EligibleSchemesScreenState
       appBar: AppBar(
         backgroundColor: green,
         foregroundColor: Colors.white,
-        title: Text(_isSurveySubmitted ? 'Eligible Schemes' : 'Check Eligibility'),
+        title: Text(
+          _isSurveySubmitted
+              ? context.tr(
+                  'eligibility.eligible_schemes_header',
+                  args: {
+                    'count':
+                        '${_viewModel.eligibleSchemes.length + _viewModel.potentiallyEligibleSchemes.length}',
+                  },
+                )
+              : context.tr('eligibility.title'),
+        ),
         actions: [
           if (_isSurveySubmitted && hasSchemes)
             IconButton(
@@ -1034,8 +1057,8 @@ class _EligibleSchemesScreenState
                     icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
                     label: Text(
                       _selectedAppliedCodes.isEmpty
-                          ? 'Submit (None Applied)'
-                          : 'Submit (${_selectedAppliedCodes.length} Already Applied)',
+                          ? context.tr('eligibility.submit_none_applied')
+                          : context.tr('eligibility.submit_selected', args: {'count': '${_selectedAppliedCodes.length}'}),
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,

@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/localization/app_localizations.dart';
+import '../../data/providers/language_provider.dart';
 import '../../viewModels/login_viewmodel.dart';
 import '../../viewModels/welcome_viewmodel.dart';
 import '../dashboard_screen/dashboard_screen.dart';
@@ -193,9 +195,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Sign In',
-                                style: TextStyle(
+                              Text(
+                                context.tr('auth.sign_in'),
+                                style: const TextStyle(
                                   fontSize: 29,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.5,
@@ -205,9 +207,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                               const SizedBox(height: 5),
 
-                              const Text(
-                                'Enter your credentials to continue',
-                                style: TextStyle(
+                              Text(
+                                context.tr('auth.login_subtitle'),
+                                style: const TextStyle(
                                   fontSize: 15,
                                   color: textGrey,
                                 ),
@@ -218,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               // Username
                               _buildInputField(
                                 controller: _usernameController,
-                                hint: 'Username',
+                                hint: context.tr('auth.mobile_number'),
                                 icon: Icons.person_outline,
                                 textInputAction: TextInputAction.next,
                               ),
@@ -228,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               // Password
                               _buildInputField(
                                 controller: _passwordController,
-                                hint: 'Password',
+                                hint: context.tr('auth.password'),
                                 icon: Icons.lock_outline,
                                 obscureText: _obscurePassword,
                                 textInputAction: TextInputAction.done,
@@ -282,10 +284,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                   const SizedBox(width: 8),
 
-                                  const Expanded(
+                                  Expanded(
                                     child: Text(
-                                      'Remember me',
-                                      style: TextStyle(
+                                      context.tr('auth.remember_me'),
+                                      style: const TextStyle(
                                         fontSize: 14,
                                         color: Color(0xFF414B50),
                                       ),
@@ -324,20 +326,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                       strokeWidth: 2.2,
                                     ),
                                   )
-                                      : const Row(
+                                      : Row(
                                     mainAxisAlignment:
                                     MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        'Login',
-                                        style: TextStyle(
+                                        context.tr('auth.login_button'),
+                                        style: const TextStyle(
                                           fontSize: 20,
                                           fontWeight:
                                           FontWeight.bold,
                                         ),
                                       ),
-                                      SizedBox(width: 18),
-                                      Icon(
+                                      const SizedBox(width: 18),
+                                      const Icon(
                                         Icons.arrow_forward,
                                         size: 28,
                                       ),
@@ -431,7 +433,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLanguageDropdown(BuildContext context) {
+    final languageProvider = context.watch<LanguageProvider>();
     final welcomeVm = context.watch<WelcomeViewModel>();
+    final currentCode = languageProvider.currentLanguageCode;
 
     return Container(
       height: 60,
@@ -464,9 +468,9 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Language',
-                  style: TextStyle(
+                Text(
+                  context.tr('common.language'),
+                  style: const TextStyle(
                     fontSize: 11,
                     color: Colors.grey,
                   ),
@@ -475,7 +479,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 26,
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      value: welcomeVm.selectedLanguage,
+                      value: currentCode,
                       isExpanded: true,
                       isDense: true,
                       icon: const Icon(
@@ -498,7 +502,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         DropdownMenuItem(
                           value: 'hi',
                           child: Text(
-                            'हिन्दी',
+                            'हिन्दी (Hindi)',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'as',
+                          child: Text(
+                            'অসমীয়া (Assamese)',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -509,6 +524,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                       onChanged: (value) {
                         if (value != null) {
+                          languageProvider.setLanguage(value);
                           welcomeVm.setLanguage(value);
                         }
                       },

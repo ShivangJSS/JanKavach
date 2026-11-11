@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../data/models/followup_model.dart';
 import '../../viewModels/followup_viewmodel.dart';
 import 'beneficiary_followup_screen.dart';
@@ -60,9 +61,9 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
     return Scaffold(
       backgroundColor: background,
       appBar: AppBar(
-        title: const Text(
-          'Scheme Follow-ups',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        title: Text(
+          context.tr('followup.scheme_followups'),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         backgroundColor: darkGreen,
         foregroundColor: Colors.white,
@@ -89,9 +90,9 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                     const SizedBox(height: 14),
                     Row(
                       children: [
-                        const Text(
-                          'Follow-up Register',
-                          style: TextStyle(
+                        Text(
+                          context.tr('followup.register_title'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF16231C),
@@ -99,7 +100,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                         ),
                         const Spacer(),
                         Text(
-                          '${_viewModel.totalItems} records',
+                          context.tr('beneficiaries.records_count', args: {'count': '${_viewModel.totalItems}'}),
                           style: const TextStyle(
                             fontSize: 12,
                             color: Colors.blueGrey,
@@ -135,18 +136,18 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                           color: Colors.blueGrey,
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          'No follow-up records found',
-                          style: TextStyle(
+                        Text(
+                          context.tr('followup.no_records'),
+                          style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF16231C),
                           ),
                         ),
                         const SizedBox(height: 6),
-                        const Text(
-                          'Try clearing filters or search query.',
-                          style: TextStyle(color: Colors.grey),
+                        Text(
+                          context.tr('followup.no_records_sub'),
+                          style: const TextStyle(color: Colors.grey),
                         ),
                       ],
                     ),
@@ -300,27 +301,27 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
       child: Row(
         children: [
           _buildChip(
-            label: 'All Status',
+            label: context.tr('followup.all_status'),
             isSelected: _viewModel.statusFilter == 'all',
             onTap: () => _viewModel.setStatusFilter('all'),
           ),
           const SizedBox(width: 8),
           _buildChip(
-            label: 'Pending',
+            label: context.tr('followup.pending_tab'),
             isSelected: _viewModel.statusFilter == 'Pending',
             color: const Color(0xFFD9700C),
             onTap: () => _viewModel.setStatusFilter('Pending'),
           ),
           const SizedBox(width: 8),
           _buildChip(
-            label: 'Applied',
+            label: context.tr('followup.status_applied'),
             isSelected: _viewModel.statusFilter == 'Applied',
             color: const Color(0xFF1377CC),
             onTap: () => _viewModel.setStatusFilter('Applied'),
           ),
           const SizedBox(width: 8),
           _buildChip(
-            label: 'Complete',
+            label: context.tr('followup.status_complete'),
             isSelected: _viewModel.statusFilter == 'Complete',
             color: const Color(0xFF168A53),
             onTap: () => _viewModel.setStatusFilter('Complete'),

@@ -1,7 +1,8 @@
-
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../login_screen/login_screen.dart';
+import '../widgets/language_selector_sheet.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -20,9 +21,9 @@ class WelcomeScreen extends StatelessWidget {
           builder: (context, constraints) {
             final compact = constraints.maxHeight < 700;
 
-            final logoHeight = compact ? 115.0 : 145.0;
-            final titleSize = compact ? 27.0 : 31.0;
-            final featureCircleSize = compact ? 58.0 : 70.0;
+            final logoHeight = compact ? 100.0 : 130.0;
+            final titleSize = compact ? 26.0 : 30.0;
+            final featureCircleSize = compact ? 56.0 : 68.0;
             final featureFontSize = compact ? 10.0 : 11.0;
 
             return Stack(
@@ -42,10 +43,20 @@ class WelcomeScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
-                    vertical: 30,
+                    vertical: 20,
                   ),
                   child: Column(
                     children: [
+                      // Top row with Language Selector
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          LanguageSelectorButton(),
+                        ],
+                      ),
+
+                      SizedBox(height: compact ? 10 : 20),
+
                       // Main logo
                       SizedBox(
                         height: logoHeight,
@@ -65,10 +76,10 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
 
                       Text(
-                        'Jan Kavach',
+                        context.tr('common.app_name'),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: titleSize,
@@ -78,32 +89,19 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 6),
 
-                      const Text(
-                        'Connecting citizens with social security schemes',
+                      Text(
+                        context.tr('welcome.tagline'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           height: 1.35,
                           color: Color(0xFF626872),
                         ),
                       ),
 
-                      SizedBox(height: compact ? 20 : 30),
-
-                      const Text(
-                        'Support citizens to discover and access '
-                            'eligible schemes.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.35,
-                          color: textColor,
-                        ),
-                      ),
-
-                      SizedBox(height: compact ? 15 : 22),
+                      SizedBox(height: compact ? 16 : 24),
 
                       // Feature cards
                       Row(
@@ -112,7 +110,7 @@ class WelcomeScreen extends StatelessWidget {
                           Expanded(
                             child: _FeatureItem(
                               icon: Icons.manage_search,
-                              label: 'Check scheme\neligibility',
+                              label: context.tr('dashboard.check_eligibility'),
                               circleSize: featureCircleSize,
                               fontSize: featureFontSize,
                             ),
@@ -120,7 +118,7 @@ class WelcomeScreen extends StatelessWidget {
                           Expanded(
                             child: _FeatureItem(
                               icon: Icons.edit_note,
-                              label: 'Apply and track\napplications',
+                              label: context.tr('dashboard.register_beneficiary'),
                               circleSize: featureCircleSize,
                               fontSize: featureFontSize,
                             ),
@@ -128,7 +126,7 @@ class WelcomeScreen extends StatelessWidget {
                           Expanded(
                             child: _FeatureItem(
                               icon: Icons.volunteer_activism_outlined,
-                              label: 'Confirm benefits\nreceived',
+                              label: context.tr('dashboard.followups'),
                               circleSize: featureCircleSize,
                               fontSize: featureFontSize,
                             ),
@@ -162,20 +160,20 @@ class WelcomeScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Flexible(
                                 child: Text(
-                                  'Continue to Login',
-                                  style: TextStyle(
+                                  context.tr('auth.sign_in'),
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
-                              SizedBox(width: 10),
-                              Icon(
+                              const SizedBox(width: 10),
+                              const Icon(
                                 Icons.arrow_forward,
                                 size: 21,
                               ),
@@ -213,7 +211,7 @@ class WelcomeScreen extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFFE5F1E6).withValues(alpha: 0.45),
+        color: const Color(0xFFE5F1E6).withOpacity(0.45),
       ),
     );
   }

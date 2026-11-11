@@ -20,6 +20,7 @@ import '../beneficiary_registration/beneficiary_registration_screen.dart';
 import '../followup/followup_hub_screen.dart';
 import '../../data/models/followup_model.dart';
 import '../../data/repository/followup_repository.dart';
+import '../../core/localization/app_localizations.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -381,8 +382,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SchemesScreen(),
                   _buildPlaceholder(
                     Icons.grid_view_rounded,
-                    'More',
-                    'More Jan Kavach features will appear here.',
+                    context.tr('dashboard.nav_more'),
+                    context.tr('dashboard.more_coming_soon'),
                   ),
                 ],
               ),
@@ -409,7 +410,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Settings',
+            tooltip: context.tr('profile.app_settings'),
             onPressed: () {
               Navigator.push(
                 context,
@@ -421,16 +422,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           const SizedBox(width: 8),
 
-          const Expanded(
+          Expanded(
             child: Text(
-              'Jan Kavach',
-              style: TextStyle(
+              context.tr('common.app_name'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
+
+          _buildHeaderSyncButton(),
+          const SizedBox(width: 10),
 
           Container(
             height: 38,
@@ -468,13 +472,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _buildProfileCard(),
 
-            const SizedBox(height: 14),
-
-            _buildOfflineSyncCard(),
-
             const SizedBox(height: 16),
 
-            _buildSectionHeading('Overview', trailing: _buildPeriodDropdown()),
+            _buildSectionHeading(
+              context.tr('dashboard.overview'),
+              trailing: _buildPeriodDropdown(),
+            ),
 
             if (_isDashboardLoading &&
                 _summary.beneficiariesRegistered == 0) ...[
@@ -504,7 +507,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   cardBackground: const Color(0xFFEDF7EE),
                   borderColor: const Color(0xFFD2EBD9),
                   value: _summary.beneficiariesRegistered.toString(),
-                  label: 'Beneficiaries\nregistered',
+                  label: context.tr('dashboard.registered_beneficiaries'),
                   valueColor: const Color(0xFF116B3F),
                 ),
                 _StatCard(
@@ -514,7 +517,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   cardBackground: const Color(0xFFFFF4E8),
                   borderColor: const Color(0xFFFFE0BE),
                   value: _summary.applicationsSubmitted.toString(),
-                  label: 'Applications\nsubmitted',
+                  label: context.tr('dashboard.eligible_schemes'),
                   valueColor: const Color(0xFFB85900),
                 ),
                 _StatCard(
@@ -524,7 +527,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   cardBackground: const Color(0xFFEEF6FF),
                   borderColor: const Color(0xFFCCE2FE),
                   value: _summary.applicationsApproved.toString(),
-                  label: 'Applications\napproved',
+                  label: context.tr('common.synced'),
                   valueColor: const Color(0xFF0F60A5),
                 ),
                 _StatCard(
@@ -534,7 +537,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   cardBackground: const Color(0xFFFFEEEE),
                   borderColor: const Color(0xFFFFD4D6),
                   value: _summary.followupsDone.toString(),
-                  label: 'Follow-ups\ndue',
+                  label: context.tr('dashboard.followups'),
                   valueColor: const Color(0xFFD42E37),
                 ),
               ],
@@ -542,7 +545,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             const SizedBox(height: 20),
 
-            _buildSectionHeading('Quick Actions'),
+            _buildSectionHeading(context.tr('dashboard.quick_actions')),
 
             const SizedBox(height: 10),
 
@@ -552,8 +555,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               iconBackground: Colors.white,
               cardBackground: const Color(0xFFEDF7EE),
               borderColor: const Color(0xFFD2EBD9),
-              title: 'Add a Beneficiary',
-              subtitle: 'Seven-step questionnaire',
+              title: context.tr('dashboard.register_beneficiary'),
+              subtitle: context.tr('dashboard.register_beneficiary_sub'),
               onTap: () {
                 Navigator.push(
                   context,
@@ -573,8 +576,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               iconBackground: Colors.white,
               cardBackground: const Color(0xFFEEF6FF),
               borderColor: const Color(0xFFCCE2FE),
-              title: 'Check Eligibility',
-              subtitle: 'Find matching schemes',
+              title: context.tr('dashboard.check_eligibility'),
+              subtitle: context.tr('dashboard.check_eligibility_sub'),
               onTap: () {
                 setState(() => _selectedTab = 1);
               },
@@ -586,8 +589,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               iconBackground: Colors.white,
               cardBackground: const Color(0xFFFFF4E8),
               borderColor: const Color(0xFFFFE0BE),
-              title: 'Record a Follow-up',
-              subtitle: 'Track application status',
+              title: context.tr('followup.title'),
+              subtitle: context.tr('dashboard.followups'),
               onTap: () {
                 Navigator.push(
                   context,
@@ -624,13 +627,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final address = addressParts.isNotEmpty
         ? addressParts.join(', ')
-        : 'Location not provided';
+        : context.tr('dashboard.location_not_provided');
 
     final displayName = _profileLoading && name.isEmpty
-        ? 'Loading profile...'
+        ? context.tr('dashboard.loading_profile')
         : name.isNotEmpty
         ? name
-        : 'User';
+        : context.tr('dashboard.user_fallback');
 
     final initials = name.trim().isEmpty
         ? 'U'
@@ -729,12 +732,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!isOnline) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No internet connection. Please connect to internet to sync offline records.',
-          ),
-          backgroundColor: Color(0xFFC0392B),
-          duration: Duration(seconds: 3),
+        SnackBar(
+          content: Text(context.tr('dashboard.sync_no_internet')),
+          backgroundColor: const Color(0xFFC0392B),
+          duration: const Duration(seconds: 3),
         ),
       );
       return;
@@ -766,7 +767,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '$count beneficiary registration(s) synced to server successfully!',
+              context.tr(
+                'dashboard.sync_success_count',
+                args: {'count': '$count'},
+              ),
             ),
             backgroundColor: green,
             duration: const Duration(seconds: 3),
@@ -776,7 +780,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Could not sync all records. $remainingCount record(s) still pending.',
+              context.tr(
+                'dashboard.sync_partial_remaining',
+                args: {'count': '$remainingCount'},
+              ),
             ),
             backgroundColor: const Color(0xFFD9700C),
             duration: const Duration(seconds: 3),
@@ -784,10 +791,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('All offline records are already synced.'),
+          SnackBar(
+            content: Text(context.tr('dashboard.all_synced')),
             backgroundColor: green,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -795,7 +802,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Sync failed: $e'),
+          content: Text('${context.tr('dashboard.sync_failed')}: $e'),
           backgroundColor: const Color(0xFFC0392B),
           duration: const Duration(seconds: 3),
         ),
@@ -809,131 +816,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Widget _buildOfflineSyncCard() {
+  Widget _buildHeaderSyncButton() {
     final hasPending = _offlinePendingCount > 0;
+    final badgeText = _offlinePendingCount > 99 ? '99+' : '$_offlinePendingCount';
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: hasPending ? const Color(0xFFFFF8E7) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: hasPending ? const Color(0xFFFFD59E) : const Color(0xFFE2E8E4),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    return Tooltip(
+      message: context.tr(
+        'dashboard.sync_pending_tooltip',
+        args: {'count': '$_offlinePendingCount'},
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: hasPending ? const Color(0xFFFFEAD0) : const Color(0xFFEDF7EE),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              hasPending ? Icons.cloud_upload_outlined : Icons.cloud_done_outlined,
-              color: hasPending ? const Color(0xFFD9700C) : green,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isSyncingOffline ? null : _handleManualSync,
+          borderRadius: BorderRadius.circular(24),
+          child: SizedBox(
+            width: 46,
+            height: 44,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
               children: [
-                Row(
-                  children: [
-                    const Text(
-                      'Offline Sync',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: textColor,
-                      ),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.32),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: hasPending ? const Color(0xFFD9700C) : const Color(0xFF168A53),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  ),
+                  child: Center(
+                    child: _isSyncingOffline
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.sync_rounded,
+                            color: Colors.white,
+                            size: 21,
+                          ),
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 19,
+                      minHeight: 19,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: hasPending
+                          ? const Color(0xFFD9700C)
+                          : const Color(0xFF168A53),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: Center(
                       child: Text(
-                        hasPending
-                            ? '$_offlinePendingCount Pending'
-                            : 'All Synced',
+                        badgeText,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  hasPending
-                      ? '$_offlinePendingCount registration${_offlinePendingCount > 1 ? 's' : ''} stored locally'
-                      : '0 offline records pending sync',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: muted,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: hasPending ? const Color(0xFF075832) : const Color(0xFFEDF7EE),
-              foregroundColor: hasPending ? Colors.white : green,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              minimumSize: const Size(0, 36),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: hasPending
-                    ? BorderSide.none
-                    : const BorderSide(color: Color(0xFFD2EBD9)),
-              ),
-            ),
-            onPressed: _isSyncingOffline ? null : _handleManualSync,
-            icon: _isSyncingOffline
-                ? SizedBox(
-                    width: 13,
-                    height: 13,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: hasPending ? Colors.white : green,
-                    ),
-                  )
-                : Icon(
-                    Icons.sync_rounded,
-                    size: 15,
-                    color: hasPending ? Colors.white : green,
-                  ),
-            label: Text(
-              _isSyncingOffline ? 'Syncing...' : 'Sync Now',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: hasPending ? Colors.white : green,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -970,10 +936,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           color: muted,
         ),
         style: const TextStyle(color: muted, fontSize: 11),
-        items: const [
-          DropdownMenuItem(value: 'This Month', child: Text('This Month')),
-          DropdownMenuItem(value: 'Last Month', child: Text('Last Month')),
-          DropdownMenuItem(value: 'This Year', child: Text('This Year')),
+        items: [
+          DropdownMenuItem(
+            value: 'This Month',
+            child: Text(context.tr('dashboard.this_month')),
+          ),
+          DropdownMenuItem(
+            value: 'Last Month',
+            child: Text(context.tr('dashboard.last_month')),
+          ),
+          DropdownMenuItem(
+            value: 'This Year',
+            child: Text(context.tr('dashboard.this_year')),
+          ),
         ],
         onChanged: (value) {
           if (value != null) {
@@ -1067,7 +1042,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // --------------------------------------------------
 
   Widget _buildBottomNavigation() {
-    const labels = ['Home', 'Beneficiaries', 'Schemes', 'More'];
+    final labels = [
+      context.tr('dashboard.nav_home'),
+      context.tr('dashboard.nav_beneficiaries'),
+      context.tr('dashboard.nav_schemes'),
+      context.tr('dashboard.nav_more'),
+    ];
 
     const icons = [
       Icons.home_rounded,
@@ -1103,6 +1083,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     setState(() => _selectedTab = index);
                     if (index == 0 && previousTab != 0) {
                       _loadDashboardData();
+                    } else if (previousTab != index) {
+                      BeneficiaryLocalDao().getPendingRegistrationsCount().then((
+                        pendingCount,
+                      ) {
+                        if (mounted) {
+                          setState(() => _offlinePendingCount = pendingCount);
+                        }
+                      });
                     }
                     if (index == 1) {
                       _beneficiariesKey.currentState?.refreshBeneficiaries();
@@ -1188,7 +1176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             OutlinedButton.icon(
               onPressed: () => setState(() => _selectedTab = 0),
               icon: const Icon(Icons.home_outlined),
-              label: const Text('Back to Home'),
+              label: Text(context.tr('dashboard.back_to_home')),
               style: OutlinedButton.styleFrom(foregroundColor: green),
             ),
           ],
