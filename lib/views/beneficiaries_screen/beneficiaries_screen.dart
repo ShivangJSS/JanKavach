@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/local/beneficiary_local_dao.dart';
 import '../../data/models/ beneficiary_model.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../viewModels/beneficiary_viewmodel.dart';
 import '../beneficiary_detail_screen/beneficiary_detail_screen.dart';
 import '../beneficiary_registration/beneficiary_registration_screen.dart';
@@ -246,9 +247,9 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
         backgroundColor: green,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.person_add_alt_1),
-        label: const Text(
-          'Add Beneficiary',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        label: Text(
+          context.tr('beneficiaries.add_beneficiary'),
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -286,7 +287,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
               ElevatedButton.icon(
                 onPressed: _refreshList,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Try Again'),
+                label: Text(context.tr('common.retry')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: green,
                   foregroundColor: Colors.white,
@@ -327,7 +328,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
               children: [
                 Expanded(
                   child: _buildTabButton(
-                    label: 'Registered',
+                    label: context.tr('beneficiaries.registered_tab'),
                     selected: _selectedTab == 0,
                     onTap: () {
                       setState(() => _selectedTab = 0);
@@ -336,7 +337,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                 ),
                 Expanded(
                   child: _buildTabButton(
-                    label: 'Drafts (${_drafts.length})',
+                    label: context.tr('beneficiaries.drafts_tab', args: {'count': '${_drafts.length}'}),
                     selected: _selectedTab == 1,
                     onTap: () {
                       setState(() => _selectedTab = 1);
@@ -358,10 +359,10 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
 
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Registered Beneficiaries',
-                    style: TextStyle(
+                    context.tr('beneficiaries.title'),
+                    style: const TextStyle(
                       color: Color(0xFF19392C),
                       fontSize: 19,
                       fontWeight: FontWeight.bold,
@@ -369,7 +370,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                   ),
                 ),
                 Text(
-                  '${_viewModel.total} records',
+                  context.tr('beneficiaries.records_count', args: {'count': '${_viewModel.total}'}),
                   style: const TextStyle(
                     color: Colors.blueGrey,
                     fontSize: 12,
@@ -468,25 +469,25 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
               color: Colors.blueGrey,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'No saved drafts yet',
-              style: TextStyle(
+            Text(
+              context.tr('beneficiaries.no_drafts'),
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: darkGreen,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Incomplete registrations you save will appear here.',
+            Text(
+              context.tr('beneficiaries.no_drafts_sub'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.blueGrey),
+              style: const TextStyle(color: Colors.blueGrey),
             ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: _loadDrafts,
               icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
+              label: Text(context.tr('common.retry')),
             ),
           ],
         ),
@@ -567,7 +568,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
       onChanged: _onSearchChanged,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
-        hintText: 'Search name or beneficiary code...',
+        hintText: context.tr('beneficiaries.search_hint'),
         prefixIcon: const Icon(
           Icons.search,
           color: Colors.blueGrey,
@@ -876,9 +877,9 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
             color: Colors.blueGrey,
           ),
           const SizedBox(height: 12),
-          const Text(
-            'No beneficiaries found',
-            style: TextStyle(
+          Text(
+            context.tr('beneficiaries.no_beneficiaries'),
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: darkGreen,
@@ -886,9 +887,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            _search.isEmpty
-                ? 'Beneficiaries will appear here when available.'
-                : 'Try searching with another name or code.',
+            context.tr('beneficiaries.no_beneficiaries_sub'),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.blueGrey),
           ),

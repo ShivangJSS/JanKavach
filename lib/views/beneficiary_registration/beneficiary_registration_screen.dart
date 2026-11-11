@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../data/local/beneficiary_local_dao.dart';
 import '../../data/models/location_model.dart';
 import '../../data/services/beneficiary_sync_service.dart';
@@ -991,7 +992,7 @@ class _BeneficiaryRegistrationScreenState
     final effectiveLabel = displayLabel ?? label;
     final formatters = <TextInputFormatter>[
       if (onlyAlphabets)
-        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Zs]')),
+        FilteringTextInputFormatter.allow(RegExp(r'[\p{L}\p{M}\s\.\-]', unicode: true)),
       if (inputFormatters != null) ...inputFormatters,
     ];
 
@@ -1011,7 +1012,13 @@ class _BeneficiaryRegistrationScreenState
             buildCounter: maxLength != null
                 ? (context, {required currentLength, required isFocused, maxLength}) => null
                 : null,
-            decoration: _inputDecoration(hint ?? 'Enter $effectiveLabel').copyWith(
+            decoration: _inputDecoration(
+              hint ??
+                  context.tr(
+                    'registration.enter_field',
+                    args: {'field': effectiveLabel},
+                  ),
+            ).copyWith(
               filled: readOnly,
               fillColor: readOnly ? const Color(0xFFF7FAF8) : Colors.white,
             ),
@@ -1021,11 +1028,17 @@ class _BeneficiaryRegistrationScreenState
                   if (readOnly) return null;
                   final trimmed = value?.trim() ?? '';
                   if (required && trimmed.isEmpty) {
-                    return 'Please enter $effectiveLabel';
+                    return context.tr(
+                      'registration.please_enter_field',
+                      args: {'field': effectiveLabel},
+                    );
                   }
                   if (trimmed.isNotEmpty && onlyAlphabets) {
-                    if (!RegExp(r'^[a-zA-Zs]+$').hasMatch(trimmed)) {
-                      return '$effectiveLabel must contain only alphabetical characters';
+                    if (!RegExp(r'^[\p{L}\p{M}\s\.\-]+$', unicode: true).hasMatch(trimmed)) {
+                      return context.tr(
+                        'registration.val_alpha_only',
+                        args: {'field': effectiveLabel},
+                      );
                     }
                   }
                   return null;
@@ -1036,13 +1049,141 @@ class _BeneficiaryRegistrationScreenState
     );
   }
 
+  String _getStepTitle(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        return context.tr('registration.step1_title');
+      case 1:
+        return context.tr('registration.step2_title');
+      case 2:
+        return context.tr('registration.step3_title');
+      case 3:
+        return context.tr('registration.step4_title');
+      case 4:
+        return context.tr('registration.step5_title');
+      case 5:
+        return context.tr('registration.step6_title');
+      case 6:
+        return context.tr('registration.step7_title');
+      default:
+        return index < _stepTitles.length ? _stepTitles[index] : '';
+    }
+  }
+
+  String _translateOption(BuildContext context, String item) {
+    switch (item) {
+      case 'Yes':
+        return context.tr('common.yes');
+      case 'No':
+        return context.tr('common.no');
+      case 'Not recorded':
+        return context.tr('registration.not_recorded');
+      case 'Father':
+        return context.tr('registration.opt_father');
+      case 'Mother':
+        return context.tr('registration.opt_mother');
+      case 'Spouse':
+        return context.tr('registration.opt_spouse');
+      case 'Guardian':
+        return context.tr('registration.opt_guardian');
+      case 'Male':
+        return context.tr('registration.gender_male');
+      case 'Female':
+        return context.tr('registration.gender_female');
+      case 'Other':
+        return context.tr('registration.gender_other');
+      case 'Rural':
+        return context.tr('registration.rural');
+      case 'Urban':
+        return context.tr('registration.urban');
+      case 'General':
+        return context.tr('registration.category_gen');
+      case 'OBC':
+        return context.tr('registration.category_obc');
+      case 'SC':
+        return context.tr('registration.category_sc');
+      case 'ST':
+        return context.tr('registration.category_st');
+      case 'Married':
+        return context.tr('registration.status_married');
+      case 'Unmarried':
+        return context.tr('registration.status_unmarried');
+      case 'Widowed':
+        return context.tr('registration.status_widow');
+      case 'Divorced':
+        return context.tr('registration.status_divorced');
+      case 'Separated':
+        return context.tr('registration.opt_separated');
+      case 'Agricultural Labourer':
+        return context.tr('registration.occ_agri_labour');
+      case 'Cultivator / Farmer':
+        return context.tr('registration.occ_cultivator');
+      case 'Daily Wage Labourer':
+        return context.tr('registration.occ_daily_wage');
+      case 'Construction Worker':
+        return context.tr('registration.occ_construction');
+      case 'Domestic Worker':
+        return context.tr('registration.occ_domestic');
+      case 'Street Vendor':
+        return context.tr('registration.occ_street_vendor');
+      case 'Artisan / Weaver':
+        return context.tr('registration.occ_artisan');
+      case 'Fisherman':
+        return context.tr('registration.occ_fisherman');
+      case 'Small Business / Shop':
+        return context.tr('registration.occ_small_business');
+      case 'Salaried - Private':
+        return context.tr('registration.occ_salaried_private');
+      case 'Salaried - Government':
+        return context.tr('registration.occ_salaried_govt');
+      case 'Self-employed / Own Account':
+        return context.tr('registration.occ_self_employed');
+      case 'Student':
+        return context.tr('registration.occ_student');
+      case 'Homemaker':
+        return context.tr('registration.occ_homemaker');
+      case 'Unemployed':
+        return context.tr('registration.occ_unemployed');
+      case 'Retired':
+        return context.tr('registration.occ_retired');
+      case 'Unable to Work':
+        return context.tr('registration.occ_unable_work');
+      case 'Trader':
+        return context.tr('registration.occ_trader');
+      case 'Weaver':
+        return context.tr('registration.occ_weaver');
+      case 'Unorganized Sector':
+        return context.tr('registration.occ_unorganized');
+      case 'Service':
+        return context.tr('registration.occ_service');
+      case 'No income':
+        return context.tr('registration.inc_none');
+      case 'Less than ₹25,000':
+        return context.tr('registration.inc_lt_25k');
+      case '₹25,000–₹50,000':
+        return context.tr('registration.inc_25k_50k');
+      case '₹50,000–₹75,000':
+        return context.tr('registration.inc_50k_75k');
+      case 'Less than ₹1,00,000':
+        return context.tr('registration.inc_lt_1l');
+      case 'More than ₹1,00,000':
+        return context.tr('registration.inc_gt_1l');
+      case 'Less than ₹8,00,000':
+        return context.tr('registration.inc_lt_8l');
+      default:
+        return item;
+    }
+  }
+
   Widget _dateField(
     String label, {
+    String? displayLabel,
     bool required = false,
     String? hint,
     DateTime? firstDate,
     DateTime? lastDate,
   }) {
+    final effectiveLabel = displayLabel ?? label;
     final controller = _controller(label);
 
     return Padding(
@@ -1050,7 +1191,7 @@ class _BeneficiaryRegistrationScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _fieldLabel(label, required),
+          _fieldLabel(effectiveLabel, required),
           const SizedBox(height: 6),
           TextFormField(
             controller: controller,
@@ -1062,7 +1203,13 @@ class _BeneficiaryRegistrationScreenState
                 lastDate: lastDate,
               );
             },
-            decoration: _inputDecoration(hint ?? 'Select $label').copyWith(
+            decoration: _inputDecoration(
+              hint ??
+                  context.tr(
+                    'registration.select_field',
+                    args: {'field': effectiveLabel},
+                  ),
+            ).copyWith(
               suffixIcon: IconButton(
                 icon: const Icon(
                   Icons.calendar_month_outlined,
@@ -1080,7 +1227,10 @@ class _BeneficiaryRegistrationScreenState
             ),
             validator: required
                 ? (value) => value == null || value.trim().isEmpty
-                      ? 'Please select $label'
+                      ? context.tr(
+                          'registration.please_select_field',
+                          args: {'field': effectiveLabel},
+                        )
                       : null
                 : null,
           ),
@@ -1257,7 +1407,12 @@ class _BeneficiaryRegistrationScreenState
           DropdownButtonFormField<String>(
             value: validValue,
             isExpanded: true,
-            decoration: _inputDecoration('Select $effectiveLabel').copyWith(
+            decoration: _inputDecoration(
+              context.tr(
+                'registration.select_field',
+                args: {'field': effectiveLabel},
+              ),
+            ).copyWith(
               filled: disabled,
               fillColor: disabled ? const Color(0xFFF7FAF8) : Colors.white,
             ),
@@ -1266,7 +1421,7 @@ class _BeneficiaryRegistrationScreenState
                   (item) => DropdownMenuItem<String>(
                     value: item,
                     child: Text(
-                      item,
+                      _translateOption(context, item),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
@@ -1297,7 +1452,10 @@ class _BeneficiaryRegistrationScreenState
             validator: (value) {
               if (disabled) return null;
               if (required && value == null) {
-                return 'Please select $effectiveLabel';
+                return context.tr(
+                  'registration.please_select_field',
+                  args: {'field': effectiveLabel},
+                );
               }
               return null;
             },
@@ -1326,7 +1484,9 @@ class _BeneficiaryRegistrationScreenState
       effectiveLocations.add(
         LocationModel(
           id: selectedId,
-          name: isLocked ? 'Assigned $effectiveLabel (ID: $selectedId)' : 'Location #$selectedId',
+          name: isLocked
+              ? '${context.tr('registration.assigned_jurisdiction')} ($effectiveLabel #$selectedId)'
+              : '$effectiveLabel #$selectedId',
         ),
       );
     }
@@ -1351,14 +1511,14 @@ class _BeneficiaryRegistrationScreenState
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(color: const Color(0xFF81C784), width: 0.8),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.lock, size: 10, color: Color(0xFF087443)),
-                      SizedBox(width: 3),
+                      const Icon(Icons.lock, size: 10, color: Color(0xFF087443)),
+                      const SizedBox(width: 3),
                       Text(
-                        'Assigned Jurisdiction',
-                        style: TextStyle(
+                        context.tr('registration.assigned_jurisdiction'),
+                        style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF087443),
@@ -1375,14 +1535,22 @@ class _BeneficiaryRegistrationScreenState
             value: effectiveLocations.any((item) => item.id == selectedId) ? selectedId : null,
             isExpanded: true,
             decoration: _inputDecoration(
-              loading ? 'Loading $effectiveLabel...' : 'Select $effectiveLabel',
+              loading
+                  ? context.tr(
+                      'registration.loading_field',
+                      args: {'field': effectiveLabel},
+                    )
+                  : context.tr(
+                      'registration.select_field',
+                      args: {'field': effectiveLabel},
+                    ),
             ).copyWith(
               filled: isActuallyDisabled,
               fillColor: isActuallyDisabled ? const Color(0xFFF7FAF8) : null,
               suffixIcon: isActuallyLocked
-                  ? const Tooltip(
-                      message: 'This field is locked to your allocated jurisdiction',
-                      child: Icon(Icons.lock_outline, size: 18, color: Color(0xFF087443)),
+                  ? Tooltip(
+                      message: context.tr('registration.locked_jurisdiction_tooltip'),
+                      child: const Icon(Icons.lock_outline, size: 18, color: Color(0xFF087443)),
                     )
                   : null,
             ),
@@ -1404,10 +1572,16 @@ class _BeneficiaryRegistrationScreenState
             validator: (value) {
               if (isActuallyDisabled) return null;
               if (required && value == null) {
-                return 'Please select $effectiveLabel';
+                return context.tr(
+                  'registration.please_select_field',
+                  args: {'field': effectiveLabel},
+                );
               }
               if (isActuallyLocked && value != selectedId) {
-                return 'You can only register beneficiaries in your assigned $effectiveLabel';
+                return context.tr(
+                  'registration.assigned_only_error',
+                  args: {'field': effectiveLabel},
+                );
               }
               return null;
             },
@@ -1419,9 +1593,11 @@ class _BeneficiaryRegistrationScreenState
 
   Widget _yesNo(
     String label, {
+    String? displayLabel,
     bool required = false,
     bool defaultYes = false,
   }) {
+    final effectiveLabel = displayLabel ?? label;
     final value = _switches[label] ?? defaultYes;
 
     return Padding(
@@ -1429,7 +1605,7 @@ class _BeneficiaryRegistrationScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _fieldLabel(label, required),
+          _fieldLabel(effectiveLabel, required),
           Row(
             children: [
               Expanded(
@@ -1438,7 +1614,7 @@ class _BeneficiaryRegistrationScreenState
                   dense: true,
                   visualDensity: VisualDensity.compact,
                   activeColor: green,
-                  title: const Text('Yes', style: TextStyle(fontSize: 12)),
+                  title: Text(context.tr('common.yes'), style: const TextStyle(fontSize: 12)),
                   value: true,
                   groupValue: value,
                   onChanged: (v) {
@@ -1453,7 +1629,7 @@ class _BeneficiaryRegistrationScreenState
                   dense: true,
                   visualDensity: VisualDensity.compact,
                   activeColor: green,
-                  title: const Text('No', style: TextStyle(fontSize: 12)),
+                  title: Text(context.tr('common.no'), style: const TextStyle(fontSize: 12)),
                   value: false,
                   groupValue: value,
                   onChanged: (v) {
@@ -1514,69 +1690,110 @@ class _BeneficiaryRegistrationScreenState
 
   Widget _buildStep1() {
     return _section(
-      'Beneficiary Details',
+      context.tr('registration.step1_title'),
       Icons.person_outline,
       Column(
         children: [
           _dateField(
             'Registration Date',
+            displayLabel: context.tr('registration.registration_date'),
             required: true,
             hint: 'DD-MM-YYYY',
             firstDate: DateTime(2000, 1, 1),
             lastDate: DateTime.now().add(const Duration(days: 365)),
           ),
-          _textField('Beneficiary Name', required: true, onlyAlphabets: true),
-          _textField("Father's Name", onlyAlphabets: true),
-          _textField("Mother's Name", onlyAlphabets: true),
-          _textField('Spouse Name', onlyAlphabets: true),
-          _dropdown('Care Of (Relation)'),
-          _textField('Care Of (Name)', onlyAlphabets: true),
-          _dropdown('Gender', required: true),
+          _textField(
+            'Beneficiary Name',
+            displayLabel: context.tr('registration.beneficiary_name'),
+            hint: context.tr('registration.beneficiary_name_hint'),
+            required: true,
+            onlyAlphabets: true,
+          ),
+          _textField(
+            "Father's Name",
+            displayLabel: context.tr('registration.father_name'),
+            onlyAlphabets: true,
+          ),
+          _textField(
+            "Mother's Name",
+            displayLabel: context.tr('registration.mother_name'),
+            onlyAlphabets: true,
+          ),
+          _textField(
+            'Spouse Name',
+            displayLabel: context.tr('registration.spouse_name'),
+            onlyAlphabets: true,
+          ),
+          _dropdown(
+            'Care Of (Relation)',
+            displayLabel: context.tr('registration.relation_type'),
+          ),
+          _textField(
+            'Care Of (Name)',
+            displayLabel: context.tr('registration.relation_name'),
+            onlyAlphabets: true,
+          ),
+          _dropdown(
+            'Gender',
+            displayLabel: context.tr('registration.gender'),
+            required: true,
+          ),
           _dateField(
             'Date of Birth',
+            displayLabel: context.tr('registration.dob'),
             hint: 'DD-MM-YYYY',
             firstDate: DateTime(1900, 1, 1),
             lastDate: DateTime.now(),
           ),
-          _textField('Age', keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], maxLength: 3),
+          _textField(
+            'Age',
+            displayLabel: context.tr('registration.age'),
+            hint: context.tr('registration.age_hint'),
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 3,
+          ),
           _textField(
             'Mobile Number',
+            displayLabel: context.tr('registration.mobile_number'),
             keyboardType: TextInputType.phone,
-            hint: '10-digit number',
+            hint: context.tr('registration.mobile_hint'),
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             maxLength: 10,
             validator: (value) {
               final trimmed = value?.trim() ?? '';
               if (trimmed.isNotEmpty && trimmed.length != 10) {
-                return 'Mobile Number must be 10 digits';
+                return context.tr('registration.val_mobile_invalid');
               }
               return null;
             },
           ),
           _textField(
             'Alternate Mobile',
+            displayLabel: context.tr('registration.alt_mobile'),
             keyboardType: TextInputType.phone,
-            hint: '10-digit number',
+            hint: context.tr('registration.mobile_hint'),
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             maxLength: 10,
             validator: (value) {
               final trimmed = value?.trim() ?? '';
               if (trimmed.isNotEmpty && trimmed.length != 10) {
-                return 'Alternate Mobile must be 10 digits';
+                return context.tr('registration.val_mobile_invalid');
               }
               return null;
             },
           ),
           _textField(
             'Aadhaar Number',
+            displayLabel: context.tr('registration.aadhaar_number'),
             keyboardType: TextInputType.number,
-            hint: '12-digit number',
+            hint: context.tr('registration.aadhaar_hint'),
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             maxLength: 12,
             validator: (value) {
               final trimmed = value?.trim() ?? '';
               if (trimmed.isNotEmpty && trimmed.length != 12) {
-                return 'Aadhaar Number must be 12 digits';
+                return context.tr('registration.val_aadhaar_invalid');
               }
               return null;
             },
@@ -1588,12 +1805,13 @@ class _BeneficiaryRegistrationScreenState
 
   Widget _buildStep2() {
     return _section(
-      'Permanent Address',
+      context.tr('registration.step2_title'),
       Icons.home_outlined,
       Column(
         children: [
           _locationDropdown(
             label: 'State',
+            displayLabel: context.tr('registration.state'),
             locations: _states,
             selectedId: _selectedStateId,
             loading: _loadingStates,
@@ -1603,6 +1821,7 @@ class _BeneficiaryRegistrationScreenState
           ),
           _locationDropdown(
             label: 'District',
+            displayLabel: context.tr('registration.district'),
             locations: _districts,
             selectedId: _selectedDistrictId,
             loading: _loadingDistricts,
@@ -1612,6 +1831,7 @@ class _BeneficiaryRegistrationScreenState
           ),
           _locationDropdown(
             label: 'Block',
+            displayLabel: context.tr('registration.block'),
             locations: _blocks,
             selectedId: _selectedBlockId,
             loading: _loadingBlocks,
@@ -1620,6 +1840,7 @@ class _BeneficiaryRegistrationScreenState
           ),
           _locationDropdown(
             label: 'Gram Panchayat',
+            displayLabel: context.tr('registration.gram_panchayat'),
             locations: _gramPanchayats,
             selectedId: _selectedGramPanchayatId,
             loading: _loadingGramPanchayats,
@@ -1627,17 +1848,37 @@ class _BeneficiaryRegistrationScreenState
           ),
           _locationDropdown(
             label: 'Village',
+            displayLabel: context.tr('registration.village'),
             locations: _villages,
             selectedId: _selectedVillageId,
             loading: _loadingVillages,
             onChanged: _onVillageChanged,
           ),
 
-          _textField('Village (if not listed)'),
-          _textField('Post Office'),
-          _textField('Address', hint: 'Enter full address'),
-          _textField('PIN Code', keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], maxLength: 6),
-          _dropdown('Rural / Urban', required: true),
+          _textField(
+            'Village (if not listed)',
+            displayLabel: context.tr('registration.village_not_listed'),
+          ),
+          _textField(
+            'Post Office',
+            displayLabel: context.tr('registration.post_office'),
+          ),
+          _textField(
+            'Address',
+            displayLabel: context.tr('registration.address_line'),
+          ),
+          _textField(
+            'PIN Code',
+            displayLabel: context.tr('registration.pincode'),
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 6,
+          ),
+          _dropdown(
+            'Rural / Urban',
+            displayLabel: context.tr('registration.area_type'),
+            required: true,
+          ),
         ],
       ),
     );
@@ -1666,17 +1907,17 @@ class _BeneficiaryRegistrationScreenState
             checkColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             controlAffinity: ListTileControlAffinity.leading,
-            title: const Text(
-              'Same as permanent address',
-              style: TextStyle(
+            title: Text(
+              context.tr('registration.same_as_permanent'),
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF182E25),
               ),
             ),
-            subtitle: const Text(
-              'Copy address details filled in the previous step',
-              style: TextStyle(
+            subtitle: Text(
+              context.tr('registration.copy_perm_sub'),
+              style: const TextStyle(
                 fontSize: 11,
                 color: Color(0xFF5A6B62),
               ),
@@ -1684,13 +1925,13 @@ class _BeneficiaryRegistrationScreenState
           ),
         ),
         _section(
-          'Current Address',
+          context.tr('registration.step3_title'),
           Icons.pin_drop_outlined,
           Column(
             children: [
               _locationDropdown(
                 label: 'Current State',
-                displayLabel: 'State',
+                displayLabel: context.tr('registration.state'),
                 locations: _states,
                 selectedId: _currentSelectedStateId,
                 loading: _loadingStates,
@@ -1700,7 +1941,7 @@ class _BeneficiaryRegistrationScreenState
               ),
               _locationDropdown(
                 label: 'Current District',
-                displayLabel: 'District',
+                displayLabel: context.tr('registration.district'),
                 locations: _currentDistricts,
                 selectedId: _currentSelectedDistrictId,
                 loading: _loadingCurrentDistricts,
@@ -1710,7 +1951,7 @@ class _BeneficiaryRegistrationScreenState
               ),
               _locationDropdown(
                 label: 'Current Block',
-                displayLabel: 'Block',
+                displayLabel: context.tr('registration.block'),
                 locations: _currentBlocks,
                 selectedId: _currentSelectedBlockId,
                 loading: _loadingCurrentBlocks,
@@ -1719,7 +1960,7 @@ class _BeneficiaryRegistrationScreenState
               ),
               _locationDropdown(
                 label: 'Current Gram Panchayat',
-                displayLabel: 'Gram Panchayat',
+                displayLabel: context.tr('registration.gram_panchayat'),
                 locations: _currentGramPanchayats,
                 selectedId: _currentSelectedGramPanchayatId,
                 loading: _loadingCurrentGramPanchayats,
@@ -1728,7 +1969,7 @@ class _BeneficiaryRegistrationScreenState
               ),
               _locationDropdown(
                 label: 'Current Village',
-                displayLabel: 'Village',
+                displayLabel: context.tr('registration.village'),
                 locations: _currentVillages,
                 selectedId: _currentSelectedVillageId,
                 loading: _loadingCurrentVillages,
@@ -1737,23 +1978,22 @@ class _BeneficiaryRegistrationScreenState
               ),
               _textField(
                 'Current Village (if not listed)',
-                displayLabel: 'Village (if not listed)',
+                displayLabel: context.tr('registration.village_not_listed'),
                 readOnly: _sameAsPermanentAddress,
               ),
               _textField(
                 'Current Post Office',
-                displayLabel: 'Post Office',
+                displayLabel: context.tr('registration.post_office'),
                 readOnly: _sameAsPermanentAddress,
               ),
               _textField(
                 'Current Address',
-                displayLabel: 'Address',
-                hint: 'Enter full address',
+                displayLabel: context.tr('registration.address_line'),
                 readOnly: _sameAsPermanentAddress,
               ),
               _textField(
                 'Current PIN Code',
-                displayLabel: 'PIN Code',
+                displayLabel: context.tr('registration.pincode'),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 maxLength: 6,
@@ -1761,7 +2001,7 @@ class _BeneficiaryRegistrationScreenState
               ),
               _dropdown(
                 'Current Rural / Urban',
-                displayLabel: 'Rural / Urban',
+                displayLabel: context.tr('registration.area_type'),
                 required: !_sameAsPermanentAddress,
                 disabled: _sameAsPermanentAddress,
               ),
@@ -1776,27 +2016,105 @@ class _BeneficiaryRegistrationScreenState
     return Column(
       children: [
         _section(
-          'Identity & Citizenship',
+          context.tr('registration.step4_title'),
           Icons.person_outline,
           Column(
             children: [
               _yesNo(
                 'Are you an Indian Citizen?',
+                displayLabel: context.tr('registration.indian_citizen'),
                 required: true,
                 defaultYes: true,
               ),
-              _dropdown('Category', required: true),
-              _dropdown('Marital Status', required: true),
+              _dropdown(
+                'Category',
+                displayLabel: context.tr('registration.social_category'),
+                required: true,
+              ),
+              _dropdown(
+                'Marital Status',
+                displayLabel: context.tr('registration.marital_status'),
+                required: true,
+              ),
             ],
           ),
         ),
         _section(
-          'Household',
+          context.tr('registration.household'),
           Icons.home_outlined,
-          _yesNo('Do you have any children?', required: true, defaultYes: true),
+          _yesNo(
+            'Do you have any children?',
+            displayLabel: context.tr('registration.has_children'),
+            required: true,
+            defaultYes: true,
+          ),
         ),
       ],
     );
+  }
+
+  String _translateDocField(BuildContext context, String field) {
+    switch (field) {
+      case 'Aadhaar Card':
+        return context.tr('registration.doc_aadhaar');
+      case 'PAN Card':
+        return context.tr('registration.doc_pan');
+      case 'Birth Certificate':
+        return context.tr('registration.doc_birth');
+      case 'Voter ID Card':
+        return context.tr('registration.doc_voter');
+      case 'Death Certificate of Husband/Father/Primary Earner of Family':
+        return context.tr('registration.doc_death');
+      case 'Income Certificate':
+        return context.tr('registration.doc_income_cert');
+      case 'Caste Certificate':
+        return context.tr('registration.doc_caste_cert');
+      case 'Antyodaya Anna Yojana (AAY) ration card':
+        return context.tr('registration.doc_ration_aay');
+      case 'Priority Household (PHH) ration card':
+        return context.tr('registration.doc_ration_phh');
+      case 'Disability Card':
+        return context.tr('registration.doc_disability_card');
+      default:
+        return field;
+    }
+  }
+
+  String _translateVulnerability(BuildContext context, String option) {
+    switch (option) {
+      case 'Migrant Labor':
+        return context.tr('registration.vuln_migrant');
+      case 'Female Sex Workers (FSW)':
+        return context.tr('registration.vuln_fsw');
+      case 'Affected by Natural Calamities':
+        return context.tr('registration.vuln_calamities');
+      case 'Affected by Conflict':
+        return context.tr('registration.vuln_conflict');
+      case 'Victims/Survivors of Violence and Abuse':
+        return context.tr('registration.vuln_violence');
+      case 'Victims and Survivors of Trafficking':
+        return context.tr('registration.vuln_trafficking');
+      case 'Tribal Population':
+        return context.tr('registration.vuln_tribal');
+      case 'Minority Group':
+        return context.tr('registration.vuln_minority');
+      case 'Orphan Child':
+        return context.tr('registration.vuln_orphan');
+      case 'Single Parent':
+        return context.tr('registration.vuln_single_parent');
+      case 'Child in Need of Care and Protection':
+        return context.tr('registration.vuln_cincp');
+      case 'Displaced':
+        return context.tr('registration.vuln_displaced');
+      case 'Elderly':
+        return context.tr('registration.vuln_elderly');
+      case 'PWD/Chronic Diseases':
+        return context.tr('registration.vuln_pwd');
+      case 'LGBTQ+':
+        return context.tr('registration.vuln_lgbtq');
+      default:
+        return option;
+    }
   }
 
   Widget _documentCheckbox(String field) {
@@ -1828,7 +2146,7 @@ class _BeneficiaryRegistrationScreenState
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
         controlAffinity: ListTileControlAffinity.leading,
         title: Text(
-          field,
+          _translateDocField(context, field),
           style: TextStyle(
             fontSize: 13,
             fontWeight: isChecked ? FontWeight.w600 : FontWeight.w400,
@@ -1836,7 +2154,9 @@ class _BeneficiaryRegistrationScreenState
           ),
         ),
         subtitle: Text(
-          isChecked ? 'Available' : 'Not available',
+          isChecked
+              ? context.tr('registration.available')
+              : context.tr('registration.not_available'),
           style: TextStyle(
             fontSize: 11,
             fontWeight: isChecked ? FontWeight.w600 : FontWeight.normal,
@@ -1866,30 +2186,42 @@ class _BeneficiaryRegistrationScreenState
     return Column(
       children: [
         _section(
-          'Livelihood',
+          context.tr('registration.livelihood'),
           Icons.work_outline,
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _dropdown('Do you earn?', required: true),
+              _dropdown(
+                'Do you earn?',
+                displayLabel: context.tr('registration.earning_status'),
+                required: true,
+              ),
               if (isEarning) ...[
-                _dropdown('Occupation', required: true),
-                _dropdown('What is your monthly income?', required: true),
+                _dropdown(
+                  'Occupation',
+                  displayLabel: context.tr('registration.occupation'),
+                  required: true,
+                ),
+                _dropdown(
+                  'What is your monthly income?',
+                  displayLabel: context.tr('registration.monthly_income'),
+                  required: true,
+                ),
               ],
             ],
           ),
         ),
         _section(
-          'Document Checklist',
+          context.tr('registration.document_checklist'),
           Icons.description_outlined,
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 12),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
-                  'Check all documents available with the beneficiary:',
-                  style: TextStyle(
+                  context.tr('registration.check_all_docs'),
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF5A6B62),
@@ -1908,25 +2240,30 @@ class _BeneficiaryRegistrationScreenState
     return Column(
       children: [
         _section(
-          'Financial Inclusion',
+          context.tr('registration.step6_title'),
           Icons.account_balance_outlined,
           Column(
             children: [
-              _yesNo('Do you have a bank account?', required: true),
+              _yesNo(
+                'Do you have a bank account?',
+                displayLabel: context.tr('registration.has_bank_account'),
+                required: true,
+              ),
               _yesNo(
                 'Is Phone Number Linked with Aadhaar Card?',
+                displayLabel: context.tr('registration.phone_aadhaar_linked'),
                 required: true,
               ),
             ],
           ),
         ),
         _section(
-          'Vulnerability',
+          context.tr('registration.vulnerability'),
           Icons.groups_outlined,
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _fieldLabel('Vulnerability Group', true),
+              _fieldLabel(context.tr('registration.vulnerability_group'), true),
               const SizedBox(height: 8),
               ..._vulnerabilityOptions.map(
                 (option) => CheckboxListTile(
@@ -1946,12 +2283,15 @@ class _BeneficiaryRegistrationScreenState
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                   controlAffinity: ListTileControlAffinity.leading,
-                  title: Text(option, style: const TextStyle(fontSize: 12)),
+                  title: Text(
+                    _translateVulnerability(context, option),
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
               ),
-              const Text(
-                'Tick every group that applies.',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
+              Text(
+                context.tr('registration.tick_every_group'),
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
               ),
             ],
           ),
@@ -1960,7 +2300,93 @@ class _BeneficiaryRegistrationScreenState
     );
   }
 
+  String _translateFieldName(BuildContext context, String field) {
+    switch (field) {
+      case 'Registration Date':
+        return context.tr('registration.registration_date');
+      case 'Beneficiary Name':
+        return context.tr('registration.beneficiary_name');
+      case "Father's Name":
+        return context.tr('registration.father_name');
+      case "Mother's Name":
+        return context.tr('registration.mother_name');
+      case 'Spouse Name':
+        return context.tr('registration.spouse_name');
+      case 'Care Of (Relation)':
+        return context.tr('registration.relation_type');
+      case 'Care Of (Name)':
+        return context.tr('registration.relation_name');
+      case 'Gender':
+        return context.tr('registration.gender');
+      case 'Date of Birth':
+        return context.tr('registration.dob');
+      case 'Age':
+        return context.tr('registration.age');
+      case 'Mobile Number':
+        return context.tr('registration.mobile_number');
+      case 'Alternate Mobile':
+        return context.tr('registration.alt_mobile');
+      case 'Aadhaar Number':
+        return context.tr('registration.aadhaar_number');
+      case 'State':
+      case 'Current State':
+        return context.tr('registration.state');
+      case 'District':
+      case 'Current District':
+        return context.tr('registration.district');
+      case 'Block':
+      case 'Current Block':
+        return context.tr('registration.block');
+      case 'Gram Panchayat':
+      case 'Current Gram Panchayat':
+        return context.tr('registration.gram_panchayat');
+      case 'Village':
+      case 'Current Village':
+        return context.tr('registration.village');
+      case 'Village (if not listed)':
+      case 'Current Village (if not listed)':
+        return context.tr('registration.village_not_listed');
+      case 'Post Office':
+      case 'Current Post Office':
+        return context.tr('registration.post_office');
+      case 'Address':
+      case 'Current Address':
+        return context.tr('registration.address_line');
+      case 'PIN Code':
+      case 'Current PIN Code':
+        return context.tr('registration.pincode');
+      case 'Rural / Urban':
+      case 'Current Rural / Urban':
+        return context.tr('registration.area_type');
+      case 'Same as permanent address':
+        return context.tr('registration.same_as_permanent');
+      case 'Are you an Indian Citizen?':
+        return context.tr('registration.indian_citizen');
+      case 'Category':
+        return context.tr('registration.social_category');
+      case 'Marital Status':
+        return context.tr('registration.marital_status');
+      case 'Do you have any children?':
+        return context.tr('registration.has_children');
+      case 'Do you earn?':
+        return context.tr('registration.earning_status');
+      case 'Occupation':
+        return context.tr('registration.occupation');
+      case 'What is your monthly income?':
+        return context.tr('registration.monthly_income');
+      case 'Do you have a bank account?':
+        return context.tr('registration.has_bank_account');
+      case 'Is Phone Number Linked with Aadhaar Card?':
+        return context.tr('registration.phone_aadhaar_linked');
+      default:
+        return _translateDocField(context, field);
+    }
+  }
+
   Widget _reviewSection(String title, List<String> fields, IconData icon) {
+    final stepIndex = _stepTitles.indexOf(title);
+    final displayTitle = stepIndex >= 0 ? _getStepTitle(context, stepIndex) : title;
+
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 9),
@@ -1972,15 +2398,14 @@ class _BeneficiaryRegistrationScreenState
       child: ExpansionTile(
         leading: Icon(icon, color: green),
         title: Text(
-          title,
+          displayTitle,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         ),
         trailing: TextButton(
           onPressed: () {
-            final index = _stepTitles.indexOf(title);
-            if (index >= 0) setState(() => _step = index);
+            if (stepIndex >= 0) setState(() => _step = stepIndex);
           },
-          child: const Text('Edit'),
+          child: Text(context.tr('registration.edit')),
         ),
         children: fields.map((field) {
           String value = _value(field);
@@ -1989,14 +2414,23 @@ class _BeneficiaryRegistrationScreenState
                 field.toLowerCase().startsWith('is ') ||
                 field.toLowerCase().startsWith('do ');
             value = _switches[field]!
-                ? (isYesNoQuestion ? 'Yes' : 'Available')
-                : (isYesNoQuestion ? 'No' : 'Not available');
+                ? (isYesNoQuestion
+                    ? context.tr('common.yes')
+                    : context.tr('registration.available'))
+                : (isYesNoQuestion
+                    ? context.tr('common.no')
+                    : context.tr('registration.not_available'));
+          } else if (value.isNotEmpty) {
+            value = _translateOption(context, value);
           }
-          if (value.isEmpty) value = 'Not provided';
+          if (value.isEmpty) value = context.tr('registration.not_provided');
 
           return ListTile(
             dense: true,
-            title: Text(field, style: const TextStyle(fontSize: 12)),
+            title: Text(
+              _translateFieldName(context, field),
+              style: const TextStyle(fontSize: 12),
+            ),
             subtitle: Text(value, style: const TextStyle(fontSize: 12)),
           );
         }).toList(),
@@ -2007,9 +2441,9 @@ class _BeneficiaryRegistrationScreenState
   Widget _buildStep7() {
     return Column(
       children: [
-        const Text(
-          'Please review the information before submitting.',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+        Text(
+          context.tr('registration.review_prompt'),
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 14),
         _reviewSection('Beneficiary Details', [
@@ -2084,19 +2518,21 @@ class _BeneficiaryRegistrationScreenState
           color: Colors.white,
           child: ListTile(
             leading: const Icon(Icons.groups_outlined, color: green),
-            title: const Text(
-              'Vulnerability Groups',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            title: Text(
+              context.tr('registration.vulnerability_group'),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
             subtitle: Text(
               _vulnerabilities.isEmpty
-                  ? 'None selected'
-                  : _vulnerabilities.join(', '),
+                  ? context.tr('registration.not_provided')
+                  : _vulnerabilities
+                      .map((item) => _translateVulnerability(context, item))
+                      .join(', '),
               style: const TextStyle(fontSize: 12),
             ),
             trailing: TextButton(
               onPressed: () => setState(() => _step = 5),
-              child: const Text('Edit'),
+              child: Text(context.tr('registration.edit')),
             ),
           ),
         ),
@@ -2113,11 +2549,9 @@ class _BeneficiaryRegistrationScreenState
           activeColor: green,
           controlAffinity: ListTileControlAffinity.leading,
           contentPadding: EdgeInsets.zero,
-          title: const Text(
-            'I confirm that the information provided is correct to the best '
-            'of my knowledge. I understand that this data will be used for '
-            'identifying eligible social security schemes.',
-            style: TextStyle(fontSize: 11, height: 1.5),
+          title: Text(
+            context.tr('registration.confirmation_declaration'),
+            style: const TextStyle(fontSize: 11, height: 1.5),
           ),
         ),
         const SizedBox(height: 6),
@@ -2133,11 +2567,9 @@ class _BeneficiaryRegistrationScreenState
           activeColor: green,
           controlAffinity: ListTileControlAffinity.leading,
           contentPadding: EdgeInsets.zero,
-          title: const Text(
-            'I confirm that the data provided will be kept private and confidential, '
-            'will only be utilized for checking eligibility for schemes, '
-            'and personal data will not be disclosed to anyone else.',
-            style: TextStyle(fontSize: 11, height: 1.5),
+          title: Text(
+            context.tr('registration.privacy_consent'),
+            style: const TextStyle(fontSize: 11, height: 1.5),
           ),
         ),
       ],
@@ -2148,30 +2580,54 @@ class _BeneficiaryRegistrationScreenState
     if (_step == 1) {
       if (_selectedStateId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select State.')),
+          SnackBar(
+            content: Text(
+              context.tr(
+                'registration.please_select_field',
+                args: {'field': context.tr('registration.state')},
+              ),
+            ),
+          ),
         );
         return false;
       }
       if (_assignedLocation?.hasAssignedState == true &&
           _selectedStateId != _assignedLocation!.stateId) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You can only register beneficiaries in your assigned state.'),
+          SnackBar(
+            content: Text(
+              context.tr(
+                'registration.assigned_only_error',
+                args: {'field': context.tr('registration.state')},
+              ),
+            ),
           ),
         );
         return false;
       }
       if (_selectedDistrictId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select District.')),
+          SnackBar(
+            content: Text(
+              context.tr(
+                'registration.please_select_field',
+                args: {'field': context.tr('registration.district')},
+              ),
+            ),
+          ),
         );
         return false;
       }
       if (_assignedLocation?.hasAssignedDistrict == true &&
           _selectedDistrictId != _assignedLocation!.districtId) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You can only register beneficiaries in your assigned district.'),
+          SnackBar(
+            content: Text(
+              context.tr(
+                'registration.assigned_only_error',
+                args: {'field': context.tr('registration.district')},
+              ),
+            ),
           ),
         );
         return false;
@@ -2180,8 +2636,13 @@ class _BeneficiaryRegistrationScreenState
           _selectedBlockId != null &&
           _selectedBlockId != _assignedLocation!.blockId) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You can only register beneficiaries in your assigned block.'),
+          SnackBar(
+            content: Text(
+              context.tr(
+                'registration.assigned_only_error',
+                args: {'field': context.tr('registration.block')},
+              ),
+            ),
           ),
         );
         return false;
@@ -2192,13 +2653,27 @@ class _BeneficiaryRegistrationScreenState
       if (!_sameAsPermanentAddress) {
         if (_currentSelectedStateId == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please select Current State.')),
+            SnackBar(
+              content: Text(
+                context.tr(
+                  'registration.please_select_field',
+                  args: {'field': context.tr('registration.state')},
+                ),
+              ),
+            ),
           );
           return false;
         }
         if (_currentSelectedDistrictId == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please select Current District.')),
+            SnackBar(
+              content: Text(
+                context.tr(
+                  'registration.please_select_field',
+                  args: {'field': context.tr('registration.district')},
+                ),
+              ),
+            ),
           );
           return false;
         }
@@ -2207,8 +2682,8 @@ class _BeneficiaryRegistrationScreenState
 
     if (_step == 5 && _vulnerabilities.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one vulnerability group.'),
+        SnackBar(
+          content: Text(context.tr('registration.val_vulnerability_req')),
         ),
       );
       return false;
@@ -2217,16 +2692,16 @@ class _BeneficiaryRegistrationScreenState
     if (_step == 6) {
       if (!(_switches['Confirmation'] ?? false)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please confirm the information before submitting.'),
+          SnackBar(
+            content: Text(context.tr('registration.val_confirm_req')),
           ),
         );
         return false;
       }
       if (!(_switches['PrivacyConsent'] ?? false)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please confirm the data privacy declaration before submitting.'),
+          SnackBar(
+            content: Text(context.tr('registration.val_privacy_req')),
           ),
         );
         return false;
@@ -2663,12 +3138,14 @@ class _BeneficiaryRegistrationScreenState
             size: 48,
           ),
           title: Text(
-            isSynced ? 'Beneficiary Registered' : 'Beneficiary Registered Offline',
+            isSynced
+                ? context.tr('registration.submit_success_title')
+                : context.tr('registration.submit_offline_title'),
           ),
           content: Text(
             isSynced
-                ? 'The beneficiary was successfully registered and synced with the server.'
-                : 'The beneficiary is registered and saved locally on this device.\n\nIt is now visible in your beneficiary list and can be synced using the Sync button on your Dashboard when connected to the internet.',
+                ? context.tr('registration.submit_success_msg')
+                : context.tr('registration.submit_offline_msg'),
           ),
           actions: [
             TextButton(
@@ -2676,7 +3153,7 @@ class _BeneficiaryRegistrationScreenState
                 Navigator.of(dialogContext).pop();
                 Navigator.of(context).pop(true);
               },
-              child: const Text('OK'),
+              child: Text(context.tr('common.ok')),
             ),
           ],
         ),
@@ -2687,10 +3164,8 @@ class _BeneficiaryRegistrationScreenState
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Could not save the beneficiary locally. Please try again.',
-          ),
+        SnackBar(
+          content: Text(context.tr('registration.save_error_msg')),
         ),
       );
     } finally {
@@ -2702,41 +3177,41 @@ class _BeneficiaryRegistrationScreenState
 
   Widget _buildDraftStatus() {
     if (_draftSaveError != null) {
-      return const Text(
-        'Draft could not be saved',
-        style: TextStyle(color: Colors.red, fontSize: 11),
+      return Text(
+        context.tr('registration.draft_not_saved'),
+        style: const TextStyle(color: Colors.red, fontSize: 11),
       );
     }
 
     if (_isSavingDraft) {
-      return const Row(
+      return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
+          const SizedBox(
             width: 12,
             height: 12,
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
-          SizedBox(width: 6),
-          Text('Saving draft...', style: TextStyle(fontSize: 11)),
+          const SizedBox(width: 6),
+          Text(context.tr('common.saving_draft'), style: const TextStyle(fontSize: 11)),
         ],
       );
     }
 
     if (_localDraftId != null) {
-      return const Row(
+      return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_circle, size: 14, color: green),
-          SizedBox(width: 4),
-          Text('Draft saved on device', style: TextStyle(fontSize: 11)),
+          const Icon(Icons.check_circle, size: 14, color: green),
+          const SizedBox(width: 4),
+          Text(context.tr('registration.draft_saved_msg'), style: const TextStyle(fontSize: 11)),
         ],
       );
     }
 
-    return const Text(
-      'Draft not saved yet',
-      style: TextStyle(fontSize: 11, color: Colors.grey),
+    return Text(
+      context.tr('registration.draft_not_saved'),
+      style: const TextStyle(fontSize: 11, color: Colors.grey),
     );
   }
 
@@ -2781,7 +3256,7 @@ class _BeneficiaryRegistrationScreenState
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Step ${index + 1}',
+                      context.tr('registration.step_short', args: {'num': '${index + 1}'}),
                       style: TextStyle(
                         fontSize: 9,
                         color: active ? green : Colors.grey,
@@ -2794,7 +3269,7 @@ class _BeneficiaryRegistrationScreenState
           ),
           const SizedBox(height: 9),
           Text(
-            '${_step + 1} of ${_stepTitles.length} • ${_stepTitles[_step]}',
+            '${context.tr('registration.step_indicator', args: {'current': '${_step + 1}', 'total': '${_stepTitles.length}'})} • ${_getStepTitle(context, _step)}',
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -2832,9 +3307,9 @@ class _BeneficiaryRegistrationScreenState
       appBar: AppBar(
         backgroundColor: darkGreen,
         foregroundColor: Colors.white,
-        title: const Text(
-          'Jan Kavach',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        title: Text(
+          context.tr('common.app_name'),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
         centerTitle: false,
         bottom: PreferredSize(
@@ -2842,7 +3317,7 @@ class _BeneficiaryRegistrationScreenState
           child: Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Text(
-              'Register Beneficiary',
+              context.tr('dashboard.register_beneficiary'),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
@@ -2872,7 +3347,7 @@ class _BeneficiaryRegistrationScreenState
                       OutlinedButton.icon(
                         onPressed: () => _restoreDraft(_localDraftId!),
                         icon: const Icon(Icons.refresh, size: 18),
-                        label: const Text('Reload saved draft'),
+                        label: Text(context.tr('registration.reload_draft')),
                       ),
                   ],
                 ),
@@ -2900,7 +3375,7 @@ class _BeneficiaryRegistrationScreenState
                             await _saveDraftNow();
                           },
                           icon: const Icon(Icons.arrow_back, size: 17),
-                          label: const Text('Back'),
+                          label: Text(context.tr('common.back')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: darkGreen,
                             side: const BorderSide(color: Color(0xFFB8D3C4)),
@@ -2934,7 +3409,9 @@ class _BeneficiaryRegistrationScreenState
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    _step == _stepTitles.length - 1 ? 'Submit Beneficiary' : 'Next',
+                                    _step == _stepTitles.length - 1
+                                        ? context.tr('registration.submit_beneficiary')
+                                        : context.tr('common.next'),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                     ),

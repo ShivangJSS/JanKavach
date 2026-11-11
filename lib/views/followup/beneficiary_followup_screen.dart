@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../data/models/followup_model.dart';
 import '../../data/repository/followup_repository.dart';
 import '../../data/services/storage_service.dart';
@@ -122,7 +123,7 @@ class _BeneficiaryFollowupScreenState extends State<BeneficiaryFollowupScreen> {
               ElevatedButton.icon(
                 onPressed: _loadProfile,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Try Again'),
+                label: Text(context.tr('common.retry')),
                 style: ElevatedButton.styleFrom(backgroundColor: green, foregroundColor: Colors.white),
               ),
             ],
@@ -186,9 +187,9 @@ class _BeneficiaryFollowupScreenState extends State<BeneficiaryFollowupScreen> {
 
           Row(
             children: [
-              const Text(
-                'Eligible Schemes for Follow-up',
-                style: TextStyle(
+              Text(
+                context.tr('followup.eligible_for_followup'),
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF16231C),
@@ -202,7 +203,7 @@ class _BeneficiaryFollowupScreenState extends State<BeneficiaryFollowupScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${activeSchemes.length} schemes',
+                  context.tr('followup.schemes_count', args: {'count': '${activeSchemes.length}'}),
                   style: const TextStyle(
                     color: green,
                     fontWeight: FontWeight.bold,
@@ -490,10 +491,10 @@ class _BeneficiaryFollowupScreenState extends State<BeneficiaryFollowupScreen> {
                 icon: const Icon(Icons.edit_calendar_outlined, size: 18),
                 label: Text(
                   status == 'Complete'
-                      ? 'Update Details'
+                      ? context.tr('followup.update_details')
                       : status == 'Applied'
-                          ? 'Track Benefit / Update'
-                          : 'Take Follow-up (Ask Beneficiary)',
+                          ? context.tr('followup.track_benefit')
+                          : context.tr('followup.take_followup'),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: statusColor,

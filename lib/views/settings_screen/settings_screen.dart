@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../data/models/master_data_download_result.dart';
+import '../../data/providers/language_provider.dart';
 import '../../data/services/connectivity_sync_service.dart';
 import '../../data/services/geography_service.dart';
 import '../../data/services/storage_service.dart';
@@ -53,19 +55,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _changeLanguage(String language) async {
-    await StorageService.saveLanguage(language);
+    await Provider.of<LanguageProvider>(context, listen: false).setLanguage(language);
 
     if (!mounted) return;
 
     setState(() => _language = language);
 
+    final msg = language == 'hi'
+        ? 'भाषा हिन्दी में चुनी गई'
+        : (language == 'as' ? 'ভাষা অসমীয়াত নিৰ্বাচন কৰা হ\'ল' : 'Language set to English');
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          language == 'hi'
-              ? 'भाषा हिन्दी में चुनी गई'
-              : 'Language set to English',
-        ),
+        content: Text(msg),
       ),
     );
   }
@@ -303,7 +305,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: _loading
                 ? 'Loading language...'
                 : _language == 'hi'
-                ? 'हिन्दी'
+                ? 'हिन्दी (Hindi)'
+                : _language == 'as'
+                ? 'অসমীয়া (Assamese)'
                 : 'English',
             trailing: _loading
                 ? const SizedBox(
@@ -323,7 +327,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   DropdownMenuItem(
                     value: 'hi',
-                    child: Text('हिन्दी'),
+                    child: Text('हिन्दी (Hindi)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'as',
+                    child: Text('অসমীয়া (Assamese)'),
                   ),
                 ],
                 onChanged: (value) {
