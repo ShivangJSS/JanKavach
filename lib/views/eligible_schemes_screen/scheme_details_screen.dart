@@ -218,6 +218,36 @@ class SchemeDetailsScreen extends StatelessWidget {
             ),
           ),
 
+          const SizedBox(height: 16),
+
+          // Available Documents
+          _DocumentStatusCard(
+            title: 'Available Documents',
+            headerIcon: Icons.check_circle_outline,
+            itemIcon: Icons.check_circle,
+            cardBackground: const Color(0xFFF3FBF6),
+            borderColor: const Color(0xFFCDEBD7),
+            accentColor: const Color(0xFF1F7A3F),
+            badgeBackground: const Color(0xFFDFF4E6),
+            documents: scheme.availableDocuments,
+            emptyMessage: 'No available documents found for this scheme.',
+          ),
+
+          const SizedBox(height: 14),
+
+          // Missing Documents
+          _DocumentStatusCard(
+            title: 'Missing Documents',
+            headerIcon: Icons.warning_amber_rounded,
+            itemIcon: Icons.error_outline,
+            cardBackground: const Color(0xFFFFF6F6),
+            borderColor: const Color(0xFFF6D0D0),
+            accentColor: const Color(0xFFC62828),
+            badgeBackground: const Color(0xFFFDE4E4),
+            documents: scheme.missingDocumentItems,
+            emptyMessage: 'No missing documents found for this scheme.',
+          ),
+
           // Application instructions
           _sectionTitle(
             'How to apply',
@@ -501,5 +531,153 @@ class SchemeDetailsScreen extends StatelessWidget {
         );
       }
     }
+  }
+}
+
+class _DocumentStatusCard extends StatelessWidget {
+  final String title;
+  final IconData headerIcon;
+  final IconData itemIcon;
+  final Color cardBackground;
+  final Color borderColor;
+  final Color accentColor;
+  final Color badgeBackground;
+  final List<SchemeDocumentItem> documents;
+  final String emptyMessage;
+
+  const _DocumentStatusCard({
+    required this.title,
+    required this.headerIcon,
+    required this.itemIcon,
+    required this.cardBackground,
+    required this.borderColor,
+    required this.accentColor,
+    required this.badgeBackground,
+    required this.documents,
+    required this.emptyMessage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBackground,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: badgeBackground,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(headerIcon, color: accentColor, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: accentColor,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: badgeBackground,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  '${documents.length}',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: accentColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(height: 1, color: borderColor),
+          const SizedBox(height: 12),
+          if (documents.isEmpty)
+            Text(
+              emptyMessage,
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: Color(0xFF5F6B64),
+              ),
+            )
+          else
+            Column(
+              children: documents.map((document) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Icon(itemIcon, color: accentColor, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              document.documentName,
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1B2420),
+                              ),
+                            ),
+                            if (document.isMandatory) ...[
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: badgeBackground,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'Mandatory',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: accentColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
   }
 }

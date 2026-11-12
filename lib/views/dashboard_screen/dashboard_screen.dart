@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../data/local/app_database.dart';
@@ -366,29 +367,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: background,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: background,
+        body: Column(
           children: [
             _buildHeader(),
 
             Expanded(
-              child: IndexedStack(
-                index: _selectedTab,
-                children: [
-                  _buildHomeContent(),
-                  BeneficiariesScreen(key: _beneficiariesKey),
-                  const SchemesScreen(),
-                  const SupportScreen(),
-                ],
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: SafeArea(
+                  top: false,
+                  bottom: false,
+                  child: IndexedStack(
+                    index: _selectedTab,
+                    children: [
+                      _buildHomeContent(),
+                      BeneficiariesScreen(key: _beneficiariesKey),
+                      const SchemesScreen(),
+                      const SupportScreen(),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
         ),
+        bottomNavigationBar: _buildBottomNavigation(),
       ),
-      bottomNavigationBar: _buildBottomNavigation(),
     );
   }
 
@@ -399,56 +412,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
       decoration: const BoxDecoration(
         color: darkGreen,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+       // borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        borderRadius: BorderRadius.zero,
       ),
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: context.tr('profile.app_settings'),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-            icon: const Icon(Icons.menu, color: Colors.white, size: 24),
-          ),
-
-          const SizedBox(width: 8),
-
-          Expanded(
-            child: Text(
-              context.tr('common.app_name'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: context.tr('profile.app_settings'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+                icon: const Icon(Icons.menu, color: Colors.white, size: 24),
               ),
-            ),
-          ),
 
-          _buildHeaderSyncButton(),
-          const SizedBox(width: 10),
+              const SizedBox(width: 8),
 
-          Container(
-            height: 38,
-            width: 38,
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Image.asset(
-              'lib/assets/logo.png',
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.shield_outlined, color: green, size: 27),
-            ),
+              Expanded(
+                child: Text(
+                  context.tr('common.app_name'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+
+              _buildHeaderSyncButton(),
+              const SizedBox(width: 10),
+
+              Container(
+                height: 38,
+                width: 38,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Image.asset(
+                  'lib/assets/logo.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.shield_outlined, color: green, size: 27),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

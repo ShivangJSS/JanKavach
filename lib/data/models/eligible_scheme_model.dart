@@ -104,6 +104,8 @@ class EligibleSchemeModel {
   final List<dynamic> failedReasons;
   final List<dynamic> unknownReasons;
   final List<String> missingDocuments;
+  final List<SchemeDocumentItem> availableDocuments;
+  final List<SchemeDocumentItem> missingDocumentItems;
   final Map<String, dynamic> benefit;
   final Map<String, dynamic> application;
   final String? sourceUrl;
@@ -129,6 +131,8 @@ class EligibleSchemeModel {
     this.failedReasons = const [],
     this.unknownReasons = const [],
     this.missingDocuments = const [],
+    this.availableDocuments = const [],
+    this.missingDocumentItems = const [],
     this.benefit = const {},
     this.application = const {},
     this.sourceUrl,
@@ -189,6 +193,16 @@ class EligibleSchemeModel {
       return item.toString();
     }).where((s) => s.trim().isNotEmpty).toList();
 
+    final documentsMap = _asMap(json['documents']);
+    final availableDocs = _parseDocumentItems(
+      documentsMap['available_documents'],
+      defaultAvailable: true,
+    );
+    final missingDocItems = _parseDocumentItems(
+      documentsMap['missing_documents'],
+      defaultAvailable: false,
+    );
+
     final statusString = _toNullableString(json['eligibility_status']);
 
     return EligibleSchemeModel(
@@ -212,6 +226,8 @@ class EligibleSchemeModel {
       failedReasons: _asList(json['failed_reasons']),
       unknownReasons: _asList(json['unknown_reasons']),
       missingDocuments: documentList,
+      availableDocuments: availableDocs,
+      missingDocumentItems: missingDocItems,
       benefit: benefitMap,
       application: appMap,
       sourceUrl: _toNullableString(json['source_url'] ?? appMap['source_url']),
@@ -313,6 +329,12 @@ class EligibleSchemeModel {
       'failed_reasons': failedReasons,
       'unknown_reasons': unknownReasons,
       'missing_documents': missingDocuments,
+      'documents': {
+        'available_documents':
+            availableDocuments.map((doc) => doc.toJson()).toList(),
+        'missing_documents':
+            missingDocumentItems.map((doc) => doc.toJson()).toList(),
+      },
       'benefit': benefit,
       'application': application,
       'application_url': applicationUrl,
@@ -321,6 +343,87 @@ class EligibleSchemeModel {
       'matched_at': matchedAt,
     };
   }
+}
+
+/// Structured document entry returned under `documents.available_documents`
+/// and `documents.missing_documents` for a matched scheme.
+class SchemeDocumentItem {
+  final int? documentTypeId;
+  final String code;
+  final String documentName;
+  final bool isMandatory;
+  final bool isAvailable;
+
+  const SchemeDocumentItem({
+    this.documentTypeId,
+    this.code = '',
+    required this.documentName,
+    this.isMandatory = false,
+    this.isAvailable = false,
+  });
+
+  factory SchemeDocumentItem.fromJson(
+    dynamic raw, {
+    bool defaultAvailable = false,
+  }) {
+    if (raw is Map) {
+      final map = Map<String, dynamic>.from(raw);
+      final name = _firstNonEmpty([
+            _toNullableString(map['document_name']),
+            _toNullableString(map['name']),
+            _toNullableString(map['title']),
+            _toNullableString(map['code']),
+          ]) ??
+          '';
+
+      return SchemeDocumentItem(
+        documentTypeId: _toInt(map['document_type_id'] ?? map['id']),
+        code: _toNullableString(map['code']) ?? '',
+        documentName: name,
+        isMandatory: _toBool(map['is_mandatory']),
+        isAvailable: map.containsKey('is_available')
+            ? _toBool(map['is_available'])
+            : defaultAvailable,
+      );
+    }
+
+    return SchemeDocumentItem(
+      documentName: _toNullableString(raw) ?? '',
+      isAvailable: defaultAvailable,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'document_type_id': documentTypeId,
+      'code': code,
+      'document_name': documentName,
+      'is_mandatory': isMandatory,
+      'is_available': isAvailable,
+    };
+  }
+}
+
+List<SchemeDocumentItem> _parseDocumentItems(
+  dynamic rawList, {
+  required bool defaultAvailable,
+}) {
+  return _asList(rawList)
+      .map(
+        (item) => SchemeDocumentItem.fromJson(
+          item,
+          defaultAvailable: defaultAvailable,
+        ),
+      )
+      .where((item) => item.documentName.trim().isNotEmpty)
+      .toList();
+}
+
+bool _toBool(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final normalized = value?.toString().trim().toLowerCase();
+  return normalized == 'true' || normalized == '1' || normalized == 'yes';
 }
 
 Map<String, dynamic> _asMap(dynamic value) {
