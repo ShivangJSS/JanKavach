@@ -8,11 +8,13 @@ import 'record_followup_sheet.dart';
 class BeneficiaryFollowupScreen extends StatefulWidget {
   final int beneficiaryId;
   final String? beneficiaryName;
+  final FollowupRepository? repository;
 
   const BeneficiaryFollowupScreen({
     super.key,
     required this.beneficiaryId,
     this.beneficiaryName,
+    this.repository,
   });
 
   @override
@@ -24,7 +26,7 @@ class _BeneficiaryFollowupScreenState extends State<BeneficiaryFollowupScreen> {
   static const Color darkGreen = Color(0xFF06452D);
   static const Color background = Color(0xFFF4F7F5);
 
-  final FollowupRepository _repository = FollowupRepository();
+  late final FollowupRepository _repository;
 
   BeneficiaryFollowupProfile? _profile;
   Set<String> _appliedSchemeCodes = {};
@@ -34,6 +36,7 @@ class _BeneficiaryFollowupScreenState extends State<BeneficiaryFollowupScreen> {
   @override
   void initState() {
     super.initState();
+    _repository = widget.repository ?? FollowupRepository();
     _loadProfile();
   }
 
@@ -306,6 +309,10 @@ class _BeneficiaryFollowupScreenState extends State<BeneficiaryFollowupScreen> {
   Widget _buildSchemeCard(BeneficiaryEligibleSchemeFollowup item) {
     final followup = item.followup;
     final status = followup?.status ?? 'Pending';
+    final normalizedStatus = status.trim().toLowerCase();
+    final isComplete =
+        normalizedStatus == 'complete' || normalizedStatus == 'completed';
+    final isApplied = normalizedStatus == 'applied';
     final pendingReason = followup?.pendingReason ?? 'Not applied yet';
 
     // Status theme colors
@@ -314,12 +321,12 @@ class _BeneficiaryFollowupScreenState extends State<BeneficiaryFollowupScreen> {
     final Color statusColor;
     final String statusLabel;
 
-    if (status == 'Complete') {
+    if (isComplete) {
       cardBg = const Color(0xFFEDF7EE);
       borderCol = const Color(0xFFD2EBD9);
       statusColor = const Color(0xFF168A53);
       statusLabel = 'Complete: Benefit Received';
-    } else if (status == 'Applied') {
+    } else if (isApplied) {
       cardBg = const Color(0xFFEEF6FF);
       borderCol = const Color(0xFFCCE2FE);
       statusColor = const Color(0xFF1377CC);
@@ -473,32 +480,42 @@ class _BeneficiaryFollowupScreenState extends State<BeneficiaryFollowupScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () async {
-                  final updated = await RecordFollowupSheet.show(
-                    context,
-                    beneficiaryId: _profile!.id,
-                    beneficiaryName: _beneficiaryDisplayName,
-                    schemeId: item.schemeId,
-                    schemeName: item.schemeName,
-                    existingFollowup: item.followup,
-                    requiredDocuments: item.requiredDocuments,
-                  );
+                onPressed: isComplete
+                    ? null
+                    : () async {
+                        final updated = await RecordFollowupSheet.show(
+                          context,
+                          beneficiaryId: _profile!.id,
+                          beneficiaryName: _beneficiaryDisplayName,
+                          schemeId: item.schemeId,
+                          schemeName: item.schemeName,
+                          existingFollowup: item.followup,
+                          requiredDocuments: item.requiredDocuments,
+                          repository: _repository,
+                        );
 
-                  if (updated == true) {
-                    _loadProfile();
-                  }
-                },
-                icon: const Icon(Icons.edit_calendar_outlined, size: 18),
+                        if (updated == true) {
+                          _loadProfile();
+                        }
+                      },
+                icon: Icon(
+                  isComplete
+                      ? Icons.verified_rounded
+                      : Icons.edit_calendar_outlined,
+                  size: 18,
+                ),
                 label: Text(
-                  status == 'Complete'
-                      ? context.tr('followup.update_details')
-                      : status == 'Applied'
+                  isComplete
+                      ? context.tr('followup.completed_tab')
+                      : isApplied
                           ? context.tr('followup.track_benefit')
                           : context.tr('followup.take_followup'),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: statusColor,
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0xFFD2EBD9),
+                  disabledForegroundColor: const Color(0xFF116B3F),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
