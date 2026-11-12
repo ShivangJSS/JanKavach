@@ -9,6 +9,7 @@ class RecordFollowupSheet extends StatefulWidget {
   final String schemeName;
   final SchemeFollowupDetail? existingFollowup;
   final List<RequiredDocumentItem>? requiredDocuments;
+  final FollowupRepository? repository;
 
   const RecordFollowupSheet({
     super.key,
@@ -18,6 +19,7 @@ class RecordFollowupSheet extends StatefulWidget {
     required this.schemeName,
     this.existingFollowup,
     this.requiredDocuments,
+    this.repository,
   });
 
   static Future<bool?> show(
@@ -28,6 +30,7 @@ class RecordFollowupSheet extends StatefulWidget {
     required String schemeName,
     SchemeFollowupDetail? existingFollowup,
     List<RequiredDocumentItem>? requiredDocuments,
+    FollowupRepository? repository,
   }) {
     return showModalBottomSheet<bool>(
       context: context,
@@ -40,6 +43,7 @@ class RecordFollowupSheet extends StatefulWidget {
         schemeName: schemeName,
         existingFollowup: existingFollowup,
         requiredDocuments: requiredDocuments,
+        repository: repository,
       ),
     );
   }
@@ -51,8 +55,17 @@ class RecordFollowupSheet extends StatefulWidget {
 class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
   static const Color green = Color(0xFF075832);
 
-  final FollowupRepository _repository = FollowupRepository();
+  late final FollowupRepository _repository;
   final _formKey = GlobalKey<FormState>();
+
+  String get _existingStatusNormalized =>
+      (widget.existingFollowup?.status ?? '').trim().toLowerCase();
+
+  bool get _isExistingApplied => _existingStatusNormalized == 'applied';
+
+  bool get _isExistingComplete =>
+      _existingStatusNormalized == 'complete' ||
+      _existingStatusNormalized == 'completed';
 
   // Selected Status: 'Applied', 'Pending', 'Complete'
   String _selectedStatus = 'Pending';
@@ -93,6 +106,7 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
   @override
   void initState() {
     super.initState();
+    _repository = widget.repository ?? FollowupRepository();
     _selectedDocTypeId = _fallbackDocumentTypes.first.id;
     _initValuesFromExisting();
     _loadDocumentTypes();
@@ -101,7 +115,12 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
   void _initValuesFromExisting() {
     final existing = widget.existingFollowup;
     if (existing != null) {
-      _selectedStatus = existing.status;
+      if (_isExistingApplied || _isExistingComplete) {
+        // After 'Yes, Applied', the second follow-up only allows marking Complete.
+        _selectedStatus = 'Complete';
+      } else {
+        _selectedStatus = existing.status;
+      }
       if (existing.pendingReason != null) {
         _pendingReason = existing.pendingReason!;
       }
@@ -228,6 +247,8 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
   }
 
   Future<void> _submit() async {
+    if (_isExistingComplete) return;
+    if (_isExistingApplied && _selectedStatus != 'Complete') return;
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedStatus == 'Applied') {
@@ -393,48 +414,105 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
                 const SizedBox(height: 10),
 
                 // Status Choice Pills
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildChoiceCard(
-                        title: 'Yes, Applied',
-                        subtitle: 'Application lodged',
-                        icon: Icons.check_circle_outline_rounded,
-                        isSelected: _selectedStatus == 'Applied',
-                        color: const Color(0xFF1377CC),
-                        onTap: () => setState(() {
-                          _selectedStatus = 'Applied';
-                          _submissionDate ??= DateTime.now();
-                        }),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildChoiceCard(
-                        title: 'Not Applied',
-                        subtitle: 'Pending / Doc issue',
-                        icon: Icons.pending_actions_rounded,
-                        isSelected: _selectedStatus == 'Pending',
-                        color: const Color(0xFFD9700C),
-                        onTap: () => setState(() => _selectedStatus = 'Pending'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildChoiceCard(
-                        title: 'Complete',
-                        subtitle: 'Benefit received',
-                        icon: Icons.verified_outlined,
-                        isSelected: _selectedStatus == 'Complete',
-                        color: const Color(0xFF168A53),
-                        onTap: () => setState(() {
-                          _selectedStatus = 'Complete';
-                          _benefitReceivedDate ??= DateTime.now();
-                        }),
-                      ),
-                    ),
-                  ],
+                Builder(
+                  builder: (context) {
+                    final canSelectApplied =
+                        !_isExistingApplied && !_isExistingComplete;
+                    final canSelectPending =
+                        !_isExistingApplied && !_isExistingComplete;
+                    final canSelectComplete = !_isExistingComplete;
+
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _buildChoiceCard(
+                            title: 'Yes, Applied',
+                            subtitle: 'Application lodged',
+                            icon: Icons.check_circle_outline_rounded,
+                            isSelected: _selectedStatus == 'Applied',
+                            isEnabled: canSelectApplied,
+                            color: const Color(0xFF1377CC),
+                            onTap: canSelectApplied
+                                ? () => setState(() {
+                                    _selectedStatus = 'Applied';
+                                    _submissionDate ??= DateTime.now();
+                                  })
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildChoiceCard(
+                            title: 'Not Applied',
+                            subtitle: 'Pending / Doc issue',
+                            icon: Icons.pending_actions_rounded,
+                            isSelected: _selectedStatus == 'Pending',
+                            isEnabled: canSelectPending,
+                            color: const Color(0xFFD9700C),
+                            onTap: canSelectPending
+                                ? () => setState(
+                                    () => _selectedStatus = 'Pending',
+                                  )
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildChoiceCard(
+                            title: 'Complete',
+                            subtitle: 'Benefit received',
+                            icon: Icons.verified_outlined,
+                            isSelected: _selectedStatus == 'Complete',
+                            isEnabled: canSelectComplete,
+                            color: const Color(0xFF168A53),
+                            onTap: canSelectComplete
+                                ? () => setState(() {
+                                    _selectedStatus = 'Complete';
+                                    _benefitReceivedDate ??= DateTime.now();
+                                  })
+                                : null,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
+
+                if (_isExistingApplied) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFCCE2FE)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 16,
+                          color: Color(0xFF0F60A5),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Application already submitted. Only Complete can be selected now.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0F60A5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 22),
 
@@ -476,7 +554,8 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _submit,
+                    onPressed:
+                        (_isSubmitting || _isExistingComplete) ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: green,
                       foregroundColor: Colors.white,
@@ -494,11 +573,13 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
                             ),
                           )
                         : Text(
-                            _selectedStatus == 'Applied'
-                                ? 'Save & Mark as Applied'
-                                : _selectedStatus == 'Complete'
-                                    ? 'Mark Scheme as Complete'
-                                    : 'Save Follow-up Progress',
+                            _isExistingComplete
+                                ? 'Completed'
+                                : _selectedStatus == 'Applied'
+                                    ? 'Save & Mark as Applied'
+                                    : _selectedStatus == 'Complete'
+                                        ? 'Mark Scheme as Complete'
+                                        : 'Save Follow-up Progress',
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -520,18 +601,45 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
     required IconData icon,
     required bool isSelected,
     required Color color,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
+    bool isEnabled = true,
   }) {
+    final Color cardBg = !isEnabled
+        ? const Color(0xFFF3F5F4)
+        : isSelected
+            ? color.withValues(alpha: 0.1)
+            : Colors.white;
+    final Color borderCol = !isEnabled
+        ? const Color(0xFFE4E8E6)
+        : isSelected
+            ? color
+            : const Color(0xFFE2E8E4);
+    final Color iconColor = !isEnabled
+        ? Colors.grey.shade400
+        : isSelected
+            ? color
+            : Colors.blueGrey;
+    final Color titleColor = !isEnabled
+        ? Colors.grey.shade400
+        : isSelected
+            ? color
+            : const Color(0xFF26352E);
+    final Color subtitleColor = !isEnabled
+        ? Colors.grey.shade400
+        : isSelected
+            ? color.withValues(alpha: 0.85)
+            : Colors.grey;
+
     return InkWell(
-      onTap: onTap,
+      onTap: isEnabled ? onTap : null,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.1) : Colors.white,
+          color: cardBg,
           border: Border.all(
-            color: isSelected ? color : const Color(0xFFE2E8E4),
-            width: isSelected ? 1.8 : 1,
+            color: borderCol,
+            width: isSelected && isEnabled ? 1.8 : 1,
           ),
           borderRadius: BorderRadius.circular(14),
         ),
@@ -539,7 +647,7 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
           children: [
             Icon(
               icon,
-              color: isSelected ? color : Colors.blueGrey,
+              color: iconColor,
               size: 24,
             ),
             const SizedBox(height: 6),
@@ -549,7 +657,7 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? color : const Color(0xFF26352E),
+                color: titleColor,
               ),
             ),
             const SizedBox(height: 2),
@@ -558,7 +666,7 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 9,
-                color: isSelected ? color.withValues(alpha: 0.85) : Colors.grey,
+                color: subtitleColor,
               ),
             ),
           ],
