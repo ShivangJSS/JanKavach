@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
+import '../../core/localization/localized_value_helper.dart';
 import '../../data/models/ beneficiary_model.dart';
 import '../../data/repository/beneficiary_repository.dart';
 import '../eligible_schemes_screen/eligible_schemes_screen.dart';
@@ -7,8 +9,13 @@ import '../followup/beneficiary_followup_screen.dart';
 
 class BeneficiaryDetailScreen extends StatefulWidget {
   final BeneficiaryModel beneficiary;
+  final Future<Map<String, dynamic>> Function(int id)? detailsLoader;
 
-  const BeneficiaryDetailScreen({super.key, required this.beneficiary});
+  const BeneficiaryDetailScreen({
+    super.key,
+    required this.beneficiary,
+    this.detailsLoader,
+  });
 
   @override
   State<BeneficiaryDetailScreen> createState() =>
@@ -34,9 +41,9 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
 
   Future<void> _loadDetails() async {
     try {
-      final details = await _repository.getBeneficiaryDetails(
-        widget.beneficiary.id,
-      );
+      final details =
+          await (widget.detailsLoader?.call(widget.beneficiary.id) ??
+              _repository.getBeneficiaryDetails(widget.beneficiary.id));
 
       if (!mounted) return;
 
@@ -57,43 +64,36 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
     }
   }
 
-  String _value(String key, {String fallback = 'Not provided'}) {
+  String _value(String key, {String? fallback}) {
     final value = _details?[key];
 
     if (value == null || value.toString().trim().isEmpty) {
-      return fallback;
+      return fallback ?? context.tr('registration.not_provided');
     }
 
     return value.toString();
   }
 
-  String _formatDate(String key) {
+  String _translatedValue(String key, {String? fallback}) {
     final value = _details?[key];
 
-    if (value == null || value.toString().isEmpty) {
-      return 'Not provided';
+    if (value == null || value.toString().trim().isEmpty) {
+      return fallback ?? context.tr('registration.not_provided');
     }
 
-    final date = DateTime.tryParse(value.toString());
+    return LocalizedValueHelper.translateOption(context, value.toString());
+  }
 
-    if (date == null) return value.toString();
+  String _formatDate(String key) {
+    return LocalizedValueHelper.formatDate(context, _details?[key]);
+  }
 
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  String _formatAge() {
+    return LocalizedValueHelper.formatAge(
+      context,
+      _details?['age'],
+      fallback: context.tr('registration.not_provided'),
+    );
   }
 
   Widget _sectionTitle(String title, IconData icon) {
@@ -178,14 +178,14 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8F5),
       appBar: AppBar(
-        title: const Text('Beneficiary Details'),
+        title: Text(context.tr('beneficiary_detail.title')),
         backgroundColor: _green,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             onPressed: _isLoading ? null : _loadDetails,
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: context.tr('beneficiary_detail.refresh'),
           ),
         ],
       ),
@@ -204,9 +204,9 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
                       color: Colors.red,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Unable to load beneficiary details',
-                      style: TextStyle(
+                    Text(
+                      context.tr('beneficiary_detail.load_error'),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -217,7 +217,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
                     ElevatedButton.icon(
                       onPressed: _loadDetails,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Try again'),
+                      label: Text(context.tr('beneficiary_detail.try_again')),
                     ),
                   ],
                 ),
@@ -228,8 +228,8 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
   }
 
   Widget _buildDetails() {
-    final recordStatus = _value('record_status');
-    final assessmentStatus = _value('assessment_status');
+    final recordStatus = _details?['record_status']?.toString();
+    final assessmentStatus = _details?['assessment_status']?.toString();
 
     return RefreshIndicator(
       onRefresh: _loadDetails,
@@ -283,70 +283,181 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _statusChip(recordStatus, _green),
-                    _statusChip(assessmentStatus, Colors.orange.shade800),
+                    _statusChip(
+                      LocalizedValueHelper.translateStatus(
+                        context,
+                        recordStatus,
+                      ),
+                      _green,
+                    ),
+                    _statusChip(
+                      LocalizedValueHelper.translateStatus(
+                        context,
+                        assessmentStatus,
+                      ),
+                      Colors.orange.shade800,
+                    ),
                   ],
                 ),
               ],
             ),
           ),
 
-          _sectionTitle('Personal Information', Icons.person_outline),
-          _infoCard([
-            MapEntry('Gender', _value('gender')),
-            MapEntry('Date of birth', _formatDate('dob')),
-            MapEntry('Age', '${_value('age')} years'),
-            MapEntry('Registration date', _formatDate('registration_date')),
-          ]),
-
-          _sectionTitle('Family Details', Icons.family_restroom),
-          _infoCard([
-            MapEntry('Relationship', _value('relation_type')),
-            MapEntry('Relationship name', _value('relation_name')),
-            MapEntry('Father name', _value('father_name')),
-            MapEntry('Mother name', _value('mother_name')),
-            MapEntry('Spouse name', _value('spouse_name')),
-          ]),
-
-          _sectionTitle('Contact Details', Icons.call_outlined),
-          _infoCard([
-            MapEntry('Mobile', _value('mobile')),
-            MapEntry('Alternate mobile', _value('alt_mobile')),
-            MapEntry(
-              'Aadhaar available',
-              _value('has_aadhaar') == '1' ? 'Yes' : 'No',
-            ),
-            MapEntry('Aadhaar last 4 digits', _value('aadhaar_last4')),
-          ]),
-
-          _sectionTitle('Address Details', Icons.location_on_outlined),
-          _infoCard([
-            MapEntry('Village', _value('village_name')),
-            MapEntry('Post office', _value('post_office')),
-            MapEntry('Address', _value('address_line')),
-            MapEntry('Pincode', _value('pincode')),
-            MapEntry('Area type', _value('area_type')),
-            MapEntry('State ID', _value('state_id')),
-            MapEntry('District ID', _value('district_id')),
-            MapEntry('Block ID', _value('block_id')),
-            MapEntry('Gram Panchayat ID', _value('gram_panchayat_id')),
-            MapEntry('Village ID', _value('village_id')),
-          ]),
-
-          _sectionTitle('Consent & Remarks', Icons.verified_user_outlined),
+          _sectionTitle(
+            context.tr('beneficiary_detail.section_personal'),
+            Icons.person_outline,
+          ),
           _infoCard([
             MapEntry(
-              'Consent given',
-              _value('consent_given') == '1' || _value('consent_given') == 'true' ? 'Yes' : 'No',
+              context.tr('registration.gender'),
+              LocalizedValueHelper.translateGender(
+                context,
+                _details?['gender'],
+              ),
+            ),
+            MapEntry(context.tr('registration.dob'), _formatDate('dob')),
+            MapEntry(context.tr('registration.age'), _formatAge()),
+            MapEntry(
+              context.tr('registration.registration_date'),
+              _formatDate('registration_date'),
+            ),
+          ]),
+
+          _sectionTitle(
+            context.tr('beneficiary_detail.section_family'),
+            Icons.family_restroom,
+          ),
+          _infoCard([
+            MapEntry(
+              context.tr('registration.relation_type'),
+              _translatedValue('relation_type'),
             ),
             MapEntry(
-              'Privacy declaration accepted',
-              _value('privacy_consent') == '1' || _value('privacy_consent') == 'true' ? 'Yes' : 'No',
+              context.tr('registration.relation_name'),
+              _value('relation_name'),
             ),
-            MapEntry('Consent date', _formatDate('consent_date')),
-            MapEntry('Remarks', _value('remarks')),
-            MapEntry('Last assessed', _value('last_assessed_at')),
-            MapEntry('Last matched', _value('last_matched_at')),
+            MapEntry(
+              context.tr('registration.father_name'),
+              _value('father_name'),
+            ),
+            MapEntry(
+              context.tr('registration.mother_name'),
+              _value('mother_name'),
+            ),
+            MapEntry(
+              context.tr('registration.spouse_name'),
+              _value('spouse_name'),
+            ),
+          ]),
+
+          _sectionTitle(
+            context.tr('beneficiary_detail.section_contact'),
+            Icons.call_outlined,
+          ),
+          _infoCard([
+            MapEntry(
+              context.tr('registration.mobile_number'),
+              _value('mobile'),
+            ),
+            MapEntry(
+              context.tr('registration.alt_mobile'),
+              _value('alt_mobile'),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.aadhaar_available'),
+              LocalizedValueHelper.formatBool(
+                context,
+                _details?['has_aadhaar'],
+              ),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.aadhaar_last4'),
+              _value('aadhaar_last4'),
+            ),
+          ]),
+
+          _sectionTitle(
+            context.tr('beneficiary_detail.section_address'),
+            Icons.location_on_outlined,
+          ),
+          _infoCard([
+            MapEntry(
+              context.tr('registration.village'),
+              _value('village_name'),
+            ),
+            MapEntry(
+              context.tr('registration.post_office'),
+              _value('post_office'),
+            ),
+            MapEntry(
+              context.tr('registration.address_line'),
+              _value('address_line'),
+            ),
+            MapEntry(
+              context.tr('registration.pincode'),
+              _value('pincode'),
+            ),
+            MapEntry(
+              context.tr('registration.area_type'),
+              _translatedValue('area_type'),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.state_id'),
+              _value('state_id'),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.district_id'),
+              _value('district_id'),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.block_id'),
+              _value('block_id'),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.gp_id'),
+              _value('gram_panchayat_id'),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.village_id'),
+              _value('village_id'),
+            ),
+          ]),
+
+          _sectionTitle(
+            context.tr('beneficiary_detail.section_consent'),
+            Icons.verified_user_outlined,
+          ),
+          _infoCard([
+            MapEntry(
+              context.tr('beneficiary_detail.consent_given'),
+              LocalizedValueHelper.formatBool(
+                context,
+                _details?['consent_given'],
+              ),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.privacy_accepted'),
+              LocalizedValueHelper.formatBool(
+                context,
+                _details?['privacy_consent'],
+              ),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.consent_date'),
+              _formatDate('consent_date'),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.remarks'),
+              _value('remarks'),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.last_assessed'),
+              _formatDate('last_assessed_at'),
+            ),
+            MapEntry(
+              context.tr('beneficiary_detail.last_matched'),
+              _formatDate('last_matched_at'),
+            ),
           ]),
 
           const SizedBox(height: 24),
@@ -368,7 +479,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
                 );
               },
               icon: const Icon(Icons.fact_check_outlined),
-              label: const Text('Check Eligibility'),
+              label: Text(context.tr('dashboard.check_eligibility')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _green,
                 foregroundColor: Colors.white,
@@ -397,9 +508,12 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
                 );
               },
               icon: const Icon(Icons.track_changes_outlined, color: _green),
-              label: const Text(
-                'Track Scheme Follow-ups',
-                style: TextStyle(color: _green, fontWeight: FontWeight.bold),
+              label: Text(
+                context.tr('beneficiary_detail.track_followups'),
+                style: const TextStyle(
+                  color: _green,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: _green, width: 1.5),

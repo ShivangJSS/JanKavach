@@ -16,6 +16,7 @@ import '../../data/services/storage_service.dart';
 import '../beneficiaries_screen/beneficiaries_screen.dart';
 import '../schemes_screen/schemes_screen.dart';
 import '../settings_screen/settings_screen.dart';
+import '../support_screen/support_screen.dart';
 import '../beneficiary_registration/beneficiary_registration_screen.dart';
 import '../followup/followup_hub_screen.dart';
 import '../../data/models/followup_model.dart';
@@ -380,11 +381,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _buildHomeContent(),
                   BeneficiariesScreen(key: _beneficiariesKey),
                   const SchemesScreen(),
-                  _buildPlaceholder(
-                    Icons.grid_view_rounded,
-                    context.tr('dashboard.nav_more'),
-                    context.tr('dashboard.more_coming_soon'),
-                  ),
+                  const SupportScreen(),
                 ],
               ),
             ),
@@ -496,49 +493,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
               childAspectRatio: 1.8,
               children: [
                 _StatCard(
                   icon: Icons.groups_rounded,
-                  iconColor: const Color(0xFF168A53),
+                  iconColor: const Color(0xFF0A8754),
                   iconBackground: Colors.white,
-                  cardBackground: const Color(0xFFEDF7EE),
-                  borderColor: const Color(0xFFD2EBD9),
+                  gradientColors: const [Color(0xFF28D17C), Color(0xFF0B8A54)],
+                  glowColor: const Color(0xFF16B85C),
+                  borderColor: Colors.white.withValues(alpha: 0.48),
                   value: _summary.beneficiariesRegistered.toString(),
                   label: context.tr('dashboard.registered_beneficiaries'),
-                  valueColor: const Color(0xFF116B3F),
+                  valueColor: Colors.white,
+                  labelColor: Colors.white.withValues(alpha: 0.94),
                 ),
                 _StatCard(
                   icon: Icons.description_outlined,
-                  iconColor: const Color(0xFFD9700C),
+                  iconColor: const Color(0xFFE65C00),
                   iconBackground: Colors.white,
-                  cardBackground: const Color(0xFFFFF4E8),
-                  borderColor: const Color(0xFFFFE0BE),
+                  gradientColors: const [Color(0xFFFFA726), Color(0xFFE65C00)],
+                  glowColor: const Color(0xFFF57C00),
+                  borderColor: Colors.white.withValues(alpha: 0.48),
                   value: _summary.applicationsSubmitted.toString(),
-                  label: context.tr('dashboard.eligible_schemes'),
-                  valueColor: const Color(0xFFB85900),
+                  label: context.tr('Application Submitted'),
+                  valueColor: Colors.white,
+                  labelColor: Colors.white.withValues(alpha: 0.94),
                 ),
                 _StatCard(
                   icon: Icons.check_circle_rounded,
-                  iconColor: const Color(0xFF1377CC),
+                  iconColor: const Color(0xFF0B62D6),
                   iconBackground: Colors.white,
-                  cardBackground: const Color(0xFFEEF6FF),
-                  borderColor: const Color(0xFFCCE2FE),
+                  gradientColors: const [Color(0xFF33A3FF), Color(0xFF0B62D6)],
+                  glowColor: const Color(0xFF1D8BFF),
+                  borderColor: Colors.white.withValues(alpha: 0.48),
                   value: _summary.applicationsApproved.toString(),
-                  label: context.tr('common.synced'),
-                  valueColor: const Color(0xFF0F60A5),
+                  label: context.tr('Application Approved'),
+                  valueColor: Colors.white,
+                  labelColor: Colors.white.withValues(alpha: 0.94),
                 ),
                 _StatCard(
                   icon: Icons.access_time_rounded,
-                  iconColor: const Color(0xFFE5434B),
+                  iconColor: const Color(0xFFD61F45),
                   iconBackground: Colors.white,
-                  cardBackground: const Color(0xFFFFEEEE),
-                  borderColor: const Color(0xFFFFD4D6),
+                  gradientColors: const [Color(0xFFFF5E7E), Color(0xFFD61F45)],
+                  glowColor: const Color(0xFFF43F5E),
+                  borderColor: Colors.white.withValues(alpha: 0.48),
                   value: _summary.followupsDone.toString(),
                   label: context.tr('dashboard.followups'),
-                  valueColor: const Color(0xFFD42E37),
+                  valueColor: Colors.white,
+                  labelColor: Colors.white.withValues(alpha: 0.94),
                 ),
               ],
             ),
@@ -551,10 +556,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             _buildActionCard(
               icon: Icons.person_add_alt_1_rounded,
-              iconColor: const Color(0xFF168A53),
-              iconBackground: Colors.white,
-              cardBackground: const Color(0xFFEDF7EE),
-              borderColor: const Color(0xFFD2EBD9),
+              iconColor: const Color(0xFF0B8A54),
+              iconGradientColors: const [Color(0xFF28D17C), Color(0xFF0B8A54)],
+              gradientColors: const [
+                Color(0xFFD5FDE4),
+                Color(0xFFF5FFF9),
+                Color(0xFFC4FBD9),
+              ],
+              borderColor: const Color(0xFF6CE29D),
               title: context.tr('dashboard.register_beneficiary'),
               subtitle: context.tr('dashboard.register_beneficiary_sub'),
               onTap: () {
@@ -572,10 +581,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             _buildActionCard(
               icon: Icons.search_rounded,
-              iconColor: const Color(0xFF1377CC),
-              iconBackground: Colors.white,
-              cardBackground: const Color(0xFFEEF6FF),
-              borderColor: const Color(0xFFCCE2FE),
+              iconColor: const Color(0xFF0B62D6),
+              iconGradientColors: const [Color(0xFF33A3FF), Color(0xFF0B62D6)],
+              gradientColors: const [
+                Color(0xFFD1EBFF),
+                Color(0xFFF4FAFF),
+                Color(0xFFBEE2FF),
+              ],
+              borderColor: const Color(0xFF6CB9FF),
               title: context.tr('dashboard.check_eligibility'),
               subtitle: context.tr('dashboard.check_eligibility_sub'),
               onTap: () {
@@ -585,10 +598,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             _buildActionCard(
               icon: Icons.description_outlined,
-              iconColor: const Color(0xFFD9700C),
-              iconBackground: Colors.white,
-              cardBackground: const Color(0xFFFFF4E8),
-              borderColor: const Color(0xFFFFE0BE),
+              iconColor: const Color(0xFFE65C00),
+              iconGradientColors: const [Color(0xFFFFA726), Color(0xFFE65C00)],
+              gradientColors: const [
+                Color(0xFFFFE2BA),
+                Color(0xFFFFF8EE),
+                Color(0xFFFFD49C),
+              ],
+              borderColor: const Color(0xFFFFB24D),
               title: context.tr('followup.title'),
               subtitle: context.tr('dashboard.followups'),
               onTap: () {
@@ -650,9 +667,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             height: 48,
             width: 48,
-            decoration: const BoxDecoration(
-              color: Color(0xFFE0F0E5),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF28D17C), Color(0xFF0B8A54)],
+              ),
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF16B85C).withValues(alpha: 0.30),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Center(
               child: Text(
@@ -660,7 +688,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF3D9566),
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -704,13 +732,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              color: const Color(0xFFE7F7E9),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFD6FCE6), Color(0xFFB8F5D2)],
+              ),
+              border: Border.all(color: const Color(0xFF6CE29D)),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               initials.toUpperCase(),
               style: const TextStyle(
-                color: green,
+                color: Color(0xFF0A7D43),
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
@@ -967,70 +1000,133 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildActionCard({
     required IconData icon,
     required Color iconColor,
-    required Color iconBackground,
-    required Color cardBackground,
+    required List<Color> iconGradientColors,
+    required List<Color> gradientColors,
     required Color borderColor,
     required String title,
     required String subtitle,
     VoidCallback? onTap,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: cardBackground,
-        borderRadius: BorderRadius.circular(15),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(15),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: borderColor),
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
+          ),
+          border: Border.all(color: borderColor, width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: iconColor.withValues(alpha: 0.18),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            child: Row(
-              children: [
-                Container(
-                  height: 42,
-                  width: 42,
-                  decoration: BoxDecoration(
-                    color: iconBackground,
-                    shape: BoxShape.circle,
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 28,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.68),
+                          Colors.white.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Icon(icon, color: iconColor, size: 23),
                 ),
-
-                const SizedBox(width: 12),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: textColor,
+              ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 11,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 44,
+                          width: 44,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: iconGradientColors,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: iconColor.withValues(alpha: 0.30),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Icon(icon, color: Colors.white, size: 22),
                         ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(fontSize: 11, color: muted),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                subtitle,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF4A5B52),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (onTap != null)
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.chevron_right_rounded,
+                              size: 20,
+                              color: iconColor,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-
-                if (onTap != null)
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 21,
-                    color: muted,
-                  ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1046,14 +1142,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context.tr('dashboard.nav_home'),
       context.tr('dashboard.nav_beneficiaries'),
       context.tr('dashboard.nav_schemes'),
-      context.tr('dashboard.nav_more'),
+      context.tr('dashboard.nav_support'),
     ];
 
     const icons = [
       Icons.home_rounded,
       Icons.people_outline_rounded,
       Icons.account_balance_outlined,
-      Icons.more_horiz_rounded,
+      Icons.support_agent_rounded,
     ];
 
     return Container(
@@ -1138,58 +1234,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --------------------------------------------------
-  // PLACEHOLDER TABS
-  // --------------------------------------------------
-
-  Widget _buildPlaceholder(IconData icon, String title, String description) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: const BoxDecoration(
-                color: Color(0xFFE3F3E8),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 42, color: green),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: darkGreen,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: muted),
-            ),
-            const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: () => setState(() => _selectedTab = 0),
-              icon: const Icon(Icons.home_outlined),
-              label: Text(context.tr('dashboard.back_to_home')),
-              style: OutlinedButton.styleFrom(foregroundColor: green),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   BoxDecoration _cardDecoration() {
     return BoxDecoration(
-      color: Colors.white,
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Colors.white, Color(0xFFF3FBF6)],
+      ),
       borderRadius: BorderRadius.circular(17),
-      border: Border.all(color: const Color(0xFFEDF0EE)),
+      border: Border.all(color: const Color(0xFFC5E8D2), width: 1.1),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF0B8A54).withValues(alpha: 0.08),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
     );
   }
 }
@@ -1202,72 +1262,152 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final Color iconBackground;
-  final Color cardBackground;
+  final List<Color> gradientColors;
+  final Color glowColor;
   final Color borderColor;
   final String value;
   final String label;
   final Color valueColor;
+  final Color labelColor;
 
   const _StatCard({
     required this.icon,
     required this.iconColor,
     required this.iconBackground,
-    this.cardBackground = Colors.white,
+    required this.gradientColors,
+    required this.glowColor,
     this.borderColor = const Color(0xFFEDF0EE),
     required this.value,
     required this.label,
-    this.valueColor = const Color(0xFF26352E),
+    this.valueColor = Colors.white,
+    this.labelColor = Colors.white,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: cardBackground,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Container(
-            height: 34,
-            width: 34,
-            decoration: BoxDecoration(
-              color: iconBackground,
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Icon(icon, color: iconColor, size: 19),
-          ),
-
-          const SizedBox(width: 8),
-
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: valueColor,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    height: 1.25,
-                    color: Color(0xFF78847E),
-                  ),
-                ),
-              ],
-            ),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: glowColor.withValues(alpha: 0.34),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.34),
+                        Colors.white.withValues(alpha: 0.06),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.45, 0.8],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -18,
+              right: -14,
+              child: IgnorePointer(
+                child: Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.16),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                children: [
+                  Container(
+                    height: 36,
+                    width: 36,
+                    decoration: BoxDecoration(
+                      color: iconBackground,
+                      borderRadius: BorderRadius.circular(11),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.10),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(icon, color: iconColor, size: 20),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: valueColor,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.14),
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          label,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            height: 1.2,
+                            fontWeight: FontWeight.w600,
+                            color: labelColor,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.10),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
