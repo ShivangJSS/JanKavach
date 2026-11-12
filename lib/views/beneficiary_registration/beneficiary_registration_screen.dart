@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/localization/app_localizations.dart';
+import '../../core/localization/localized_value_helper.dart';
 import '../../data/local/beneficiary_local_dao.dart';
 import '../../data/models/location_model.dart';
 import '../../data/services/beneficiary_sync_service.dart';
@@ -1071,108 +1072,7 @@ class _BeneficiaryRegistrationScreenState
   }
 
   String _translateOption(BuildContext context, String item) {
-    switch (item) {
-      case 'Yes':
-        return context.tr('common.yes');
-      case 'No':
-        return context.tr('common.no');
-      case 'Not recorded':
-        return context.tr('registration.not_recorded');
-      case 'Father':
-        return context.tr('registration.opt_father');
-      case 'Mother':
-        return context.tr('registration.opt_mother');
-      case 'Spouse':
-        return context.tr('registration.opt_spouse');
-      case 'Guardian':
-        return context.tr('registration.opt_guardian');
-      case 'Male':
-        return context.tr('registration.gender_male');
-      case 'Female':
-        return context.tr('registration.gender_female');
-      case 'Other':
-        return context.tr('registration.gender_other');
-      case 'Rural':
-        return context.tr('registration.rural');
-      case 'Urban':
-        return context.tr('registration.urban');
-      case 'General':
-        return context.tr('registration.category_gen');
-      case 'OBC':
-        return context.tr('registration.category_obc');
-      case 'SC':
-        return context.tr('registration.category_sc');
-      case 'ST':
-        return context.tr('registration.category_st');
-      case 'Married':
-        return context.tr('registration.status_married');
-      case 'Unmarried':
-        return context.tr('registration.status_unmarried');
-      case 'Widowed':
-        return context.tr('registration.status_widow');
-      case 'Divorced':
-        return context.tr('registration.status_divorced');
-      case 'Separated':
-        return context.tr('registration.opt_separated');
-      case 'Agricultural Labourer':
-        return context.tr('registration.occ_agri_labour');
-      case 'Cultivator / Farmer':
-        return context.tr('registration.occ_cultivator');
-      case 'Daily Wage Labourer':
-        return context.tr('registration.occ_daily_wage');
-      case 'Construction Worker':
-        return context.tr('registration.occ_construction');
-      case 'Domestic Worker':
-        return context.tr('registration.occ_domestic');
-      case 'Street Vendor':
-        return context.tr('registration.occ_street_vendor');
-      case 'Artisan / Weaver':
-        return context.tr('registration.occ_artisan');
-      case 'Fisherman':
-        return context.tr('registration.occ_fisherman');
-      case 'Small Business / Shop':
-        return context.tr('registration.occ_small_business');
-      case 'Salaried - Private':
-        return context.tr('registration.occ_salaried_private');
-      case 'Salaried - Government':
-        return context.tr('registration.occ_salaried_govt');
-      case 'Self-employed / Own Account':
-        return context.tr('registration.occ_self_employed');
-      case 'Student':
-        return context.tr('registration.occ_student');
-      case 'Homemaker':
-        return context.tr('registration.occ_homemaker');
-      case 'Unemployed':
-        return context.tr('registration.occ_unemployed');
-      case 'Retired':
-        return context.tr('registration.occ_retired');
-      case 'Unable to Work':
-        return context.tr('registration.occ_unable_work');
-      case 'Trader':
-        return context.tr('registration.occ_trader');
-      case 'Weaver':
-        return context.tr('registration.occ_weaver');
-      case 'Unorganized Sector':
-        return context.tr('registration.occ_unorganized');
-      case 'Service':
-        return context.tr('registration.occ_service');
-      case 'No income':
-        return context.tr('registration.inc_none');
-      case 'Less than ₹25,000':
-        return context.tr('registration.inc_lt_25k');
-      case '₹25,000–₹50,000':
-        return context.tr('registration.inc_25k_50k');
-      case '₹50,000–₹75,000':
-        return context.tr('registration.inc_50k_75k');
-      case 'Less than ₹1,00,000':
-        return context.tr('registration.inc_lt_1l');
-      case 'More than ₹1,00,000':
-        return context.tr('registration.inc_gt_1l');
-      case 'Less than ₹8,00,000':
-        return context.tr('registration.inc_lt_8l');
-      default:
-        return item;
-    }
+    return LocalizedValueHelper.translateOption(context, item);
   }
 
   Widget _dateField(

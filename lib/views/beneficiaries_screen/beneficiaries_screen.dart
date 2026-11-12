@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -6,18 +5,17 @@ import 'package:flutter/material.dart';
 import '../../data/local/beneficiary_local_dao.dart';
 import '../../data/models/ beneficiary_model.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/localization/localized_value_helper.dart';
 import '../../viewModels/beneficiary_viewmodel.dart';
 import '../beneficiary_detail_screen/beneficiary_detail_screen.dart';
 import '../beneficiary_registration/beneficiary_registration_screen.dart';
 import '../../data/services/beneficiary_sync_service.dart';
 
-
 class BeneficiariesScreen extends StatefulWidget {
   const BeneficiariesScreen({super.key});
 
   @override
-  State<BeneficiariesScreen> createState() =>
-      BeneficiariesScreenState();
+  State<BeneficiariesScreen> createState() => BeneficiariesScreenState();
 }
 
 class BeneficiariesScreenState extends State<BeneficiariesScreen> {
@@ -27,8 +25,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
   static const Color background = Color(0xFFF4F7F5);
 
   late final BeneficiaryViewModel _viewModel;
-  final TextEditingController _searchController =
-  TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final BeneficiaryLocalDao _localDao = BeneficiaryLocalDao();
 
@@ -64,25 +61,16 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     }
   }
 
-
   void _onSearchChanged(String value) {
     _searchDebounce?.cancel();
 
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 450),
-          () {
-        if (!mounted) return;
+    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+      if (!mounted) return;
 
-        _search = value.trim();
-        _viewModel.loadBeneficiaries(
-          refresh: true,
-          search: _search,
-        );
-      },
-    );
+      _search = value.trim();
+      _viewModel.loadBeneficiaries(refresh: true, search: _search);
+    });
   }
-
-
 
   Future<void> _loadDrafts() async {
     setState(() => _isLoadingDrafts = true);
@@ -100,8 +88,8 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to load saved drafts.'),
+          SnackBar(
+            content: Text(context.tr('beneficiaries.drafts_load_error')),
           ),
         );
       }
@@ -116,11 +104,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-
-
-        builder: (_) => BeneficiaryRegistrationScreen(
-          localDraftId: localId,
-        ),
+        builder: (_) => BeneficiaryRegistrationScreen(localDraftId: localId),
       ),
     );
 
@@ -130,10 +114,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     if (result == true) {
       await _refreshList();
     }
-
   }
-
-
 
   Future<void> refreshBeneficiaries() async {
     if (!mounted) return;
@@ -142,10 +123,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
   }
 
   Future<void> _refreshList() async {
-    await _viewModel.loadBeneficiaries(
-      refresh: true,
-      search: _search,
-    );
+    await _viewModel.loadBeneficiaries(refresh: true, search: _search);
   }
 
   Future<void> _syncBeneficiaryNow(BeneficiaryModel beneficiary) async {
@@ -158,30 +136,34 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     setState(() => _syncingBeneficiaryIds.add(localId));
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             ),
-            SizedBox(width: 12),
-            Text('Syncing beneficiary with server...'),
+            const SizedBox(width: 12),
+            Text(context.tr('beneficiaries.syncing_beneficiary')),
           ],
         ),
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
 
     try {
-      final success = await BeneficiarySyncService.instance.syncSingleBeneficiary(localId);
+      final success = await BeneficiarySyncService.instance
+          .syncSingleBeneficiary(localId);
       if (!mounted) return;
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Beneficiary synced with server successfully!'),
+          SnackBar(
+            content: Text(context.tr('beneficiaries.sync_beneficiary_success')),
             backgroundColor: green,
           ),
         );
@@ -194,8 +176,11 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
           SnackBar(
             content: Text(
               errorMsg != null && errorMsg.isNotEmpty
-                  ? 'Sync failed: $errorMsg'
-                  : 'Unable to sync. Please ensure internet is connected.',
+                  ? context.tr(
+                      'beneficiaries.sync_failed_reason',
+                      args: {'error': errorMsg},
+                    )
+                  : context.tr('beneficiaries.sync_no_internet'),
             ),
             backgroundColor: Colors.red.shade700,
           ),
@@ -224,11 +209,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(child: _buildBody()),
-          ],
-        ),
+        child: Column(children: [Expanded(child: _buildBody())]),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
@@ -259,9 +240,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     if (_selectedTab == 0 &&
         _viewModel.isLoading &&
         _viewModel.beneficiaries.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(color: green),
-      );
+      return const Center(child: CircularProgressIndicator(color: green));
     }
 
     if (_selectedTab == 0 &&
@@ -279,10 +258,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                 color: Colors.blueGrey,
               ),
               const SizedBox(height: 14),
-              Text(
-                _viewModel.error!,
-                textAlign: TextAlign.center,
-              ),
+              Text(_viewModel.error!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: _refreshList,
@@ -310,7 +286,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
       },
       child: ListView(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 84),
         children: [
           const SizedBox(height: 0),
 
@@ -320,9 +296,14 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFFE1E8E4),
-              ),
+              border: Border.all(color: const Color(0xFFD5E3DB)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -337,7 +318,10 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                 ),
                 Expanded(
                   child: _buildTabButton(
-                    label: context.tr('beneficiaries.drafts_tab', args: {'count': '${_drafts.length}'}),
+                    label: context.tr(
+                      'beneficiaries.drafts_tab',
+                      args: {'count': '${_drafts.length}'},
+                    ),
                     selected: _selectedTab == 1,
                     onTap: () {
                       setState(() => _selectedTab = 1);
@@ -355,7 +339,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
           if (_selectedTab == 0) ...[
             _buildSearchField(),
 
-            const SizedBox(height: 9),
+            const SizedBox(height: 12),
 
             Row(
               children: [
@@ -364,51 +348,47 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                     context.tr('beneficiaries.title'),
                     style: const TextStyle(
                       color: Color(0xFF19392C),
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
                 Text(
-                  context.tr('beneficiaries.records_count', args: {'count': '${_viewModel.total}'}),
+                  context.tr(
+                    'beneficiaries.records_count',
+                    args: {'count': '${_viewModel.total}'},
+                  ),
                   style: const TextStyle(
-                    color: Colors.blueGrey,
+                    color: Color(0xFF5A6E63),
                     fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 9),
+            const SizedBox(height: 10),
 
             if (_viewModel.beneficiaries.isEmpty)
               _buildEmptyState()
             else
-              ..._viewModel.beneficiaries
-                  .map(_buildBeneficiaryCard),
+              ..._viewModel.beneficiaries.asMap().entries.map(
+                (entry) => _buildBeneficiaryCard(entry.value, entry.key),
+              ),
 
             if (_viewModel.isLoadingMore)
               const Padding(
                 padding: EdgeInsets.all(20),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: green,
-                  ),
-                ),
+                child: Center(child: CircularProgressIndicator(color: green)),
               ),
 
-            if (_viewModel.error != null &&
-                _viewModel.beneficiaries.isNotEmpty)
+            if (_viewModel.error != null && _viewModel.beneficiaries.isNotEmpty)
               TextButton.icon(
                 onPressed: () {
-                  _viewModel.loadBeneficiaries(
-                    search: _search,
-                  );
+                  _viewModel.loadBeneficiaries(search: _search);
                 },
                 icon: const Icon(Icons.refresh),
-                label: const Text(
-                  'Failed to load more. Retry',
-                ),
+                label: Text(context.tr('beneficiaries.load_more_retry')),
               ),
           ] else ...[
             _buildDraftsList(),
@@ -418,43 +398,53 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     );
   }
 
-
   Widget _buildTabButton({
     required String label,
     required bool selected,
     required VoidCallback onTap,
   }) {
     return InkWell(
-      borderRadius: BorderRadius.circular(11),
+      borderRadius: BorderRadius.circular(10),
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13),
+        padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? green : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
+          gradient: selected
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF159957), Color(0xFF075832)],
+                )
+              : null,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: green.withValues(alpha: 0.22),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
             color: selected ? Colors.white : darkGreen,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
           ),
         ),
       ),
     );
   }
 
-
-
   Widget _buildDraftsList() {
     if (_isLoadingDrafts && _drafts.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(32),
-        child: Center(
-          child: CircularProgressIndicator(color: green),
-        ),
+        child: Center(child: CircularProgressIndicator(color: green)),
       );
     }
 
@@ -463,11 +453,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
         padding: const EdgeInsets.symmetric(vertical: 48),
         child: Column(
           children: [
-            const Icon(
-              Icons.drafts_outlined,
-              size: 54,
-              color: Colors.blueGrey,
-            ),
+            const Icon(Icons.drafts_outlined, size: 54, color: Colors.blueGrey),
             const SizedBox(height: 12),
             Text(
               context.tr('beneficiaries.no_drafts'),
@@ -497,9 +483,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     return Column(
       children: _drafts.map((draft) {
         final localId = draft['local_id'] as int;
-        final formData = Map<String, dynamic>.from(
-          draft['form_data'] as Map,
-        );
+        final formData = Map<String, dynamic>.from(draft['form_data'] as Map);
         final formState = Map<String, dynamic>.from(
           formData['form_state'] as Map? ?? {},
         );
@@ -507,12 +491,9 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
           formState['controllers'] as Map? ?? {},
         );
 
-        final name = controllers['Beneficiary Name']
-            ?.toString()
-            .trim();
+        final name = controllers['Beneficiary Name']?.toString().trim();
 
-        final currentStep =
-            (draft['current_step'] as num?)?.toInt() ?? 0;
+        final currentStep = (draft['current_step'] as num?)?.toInt() ?? 0;
 
         return Card(
           color: const Color(0xFFFFF4E8),
@@ -526,14 +507,11 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
             contentPadding: const EdgeInsets.all(14),
             leading: const CircleAvatar(
               backgroundColor: Colors.white,
-              child: Icon(
-                Icons.edit_note,
-                color: Color(0xFFD9700C),
-              ),
+              child: Icon(Icons.edit_note, color: Color(0xFFD9700C)),
             ),
             title: Text(
               name == null || name.isEmpty
-                  ? 'Unnamed beneficiary'
+                  ? context.tr('beneficiaries.unnamed_beneficiary')
                   : name,
               style: const TextStyle(
                 fontWeight: FontWeight.w700,
@@ -543,10 +521,11 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(
-                'Step ${currentStep + 1} of 6 · Saved on this device',
-                style: const TextStyle(
-                  color: Color(0xFF5D6B64),
+                context.tr(
+                  'beneficiaries.draft_step_device',
+                  args: {'current': '${currentStep + 1}', 'total': '6'},
                 ),
+                style: const TextStyle(color: Color(0xFF5D6B64)),
               ),
             ),
             trailing: const Icon(
@@ -560,176 +539,413 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     );
   }
 
-
-
   Widget _buildSearchField() {
-    return TextField(
-      controller: _searchController,
-      onChanged: _onSearchChanged,
-      textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        hintText: context.tr('beneficiaries.search_hint'),
-        prefixIcon: const Icon(
-          Icons.search,
-          color: Colors.blueGrey,
-        ),
-        suffixIcon: _searchController.text.isEmpty
-            ? null
-            : IconButton(
-          onPressed: () {
-            _searchController.clear();
-            _onSearchChanged('');
-            setState(() {});
-          },
-          icon: const Icon(Icons.close),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 17),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(17),
-          borderSide: const BorderSide(color: Color(0xFFE1E8E4)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(17),
-          borderSide: const BorderSide(color: Color(0xFFE1E8E4)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(17),
-          borderSide: const BorderSide(color: green, width: 1.5),
+    return Container(
+      height: 42,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: const Color(0xFFCFE2D7), width: 1.1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: _onSearchChanged,
+        textInputAction: TextInputAction.search,
+        style: const TextStyle(fontSize: 13, color: Color(0xFF162921)),
+        textAlignVertical: TextAlignVertical.center,
+        decoration: InputDecoration(
+          hintText: context.tr('beneficiaries.search_hint'),
+          hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF6B7B73)),
+          isDense: true,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Color(0xFF547264),
+            size: 19,
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 38,
+            minHeight: 38,
+          ),
+          suffixIcon: _searchController.text.isEmpty
+              ? null
+              : IconButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () {
+                    _searchController.clear();
+                    _onSearchChanged('');
+                    setState(() {});
+                  },
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: Color(0xFF6B7B73),
+                  ),
+                ),
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 36,
+            minHeight: 36,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildBeneficiaryCard(BeneficiaryModel beneficiary) {
+  Widget _buildBeneficiaryCard(BeneficiaryModel beneficiary, int index) {
     final status = beneficiary.recordStatus ?? 'Unknown';
     final assessment = beneficiary.assessmentStatus ?? 'Unknown';
+    final isAlt = index.isOdd;
 
-    return Card(
-      color: const Color(0xFFEDF7EE),
-      elevation: 0,
+    // Alternating two harmonious glossy palettes: Soft Mint Emerald <-> Soft Sky Blue
+    final List<Color> cardGradient = isAlt
+        ? const [Color(0xFFCDE7FF), Color(0xFFF3F9FF), Color(0xFFBDDEFF)]
+        : const [Color(0xFFD6FCE5), Color(0xFFF4FFF9), Color(0xFFC4FBD9)];
+    final List<Color> avatarGradient = isAlt
+        ? const [Color(0xFF33A3FF), Color(0xFF0B62D6)]
+        : const [Color(0xFF28D17C), Color(0xFF0B8A54)];
+    final Color borderColor = isAlt
+        ? const Color(0xFF6EB9FF)
+        : const Color(0xFF6CE29D);
+    final Color accentColor = isAlt
+        ? const Color(0xFF0B62D6)
+        : const Color(0xFF0B8A54);
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFFD2EBD9)),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: cardGradient,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.14),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BeneficiaryDetailScreen(
-                beneficiary: beneficiary,
-              ),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      beneficiary.gender?.toLowerCase() == 'female'
-                          ? Icons.person_2_outlined
-                          : Icons.person_outline,
-                      color: green,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          beneficiary.name,
-                          style: const TextStyle(
-                            color: Color(0xFF18372B),
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          beneficiary.beneficiaryCode.isEmpty
-                              ? 'Code unavailable'
-                              : beneficiary.beneficiaryCode,
-                          style: const TextStyle(
-                            color: Color(0xFF5A6E63),
-                            fontSize: 12,
-                          ),
-                        ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 24,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.65),
+                        Colors.white.withValues(alpha: 0.0),
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: green.withValues(alpha: 0.7),
-                    size: 24,
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 7),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  _statusBadge(status),
-                  _statusBadge(assessment),
-                  if (status.contains('Sync Failed') || status.contains('Pending Sync'))
-                    Builder(
-                      builder: (context) {
-                        final isSyncing = _syncingBeneficiaryIds.contains(beneficiary.id.abs()) ||
-                            BeneficiarySyncService.instance.isSyncingLocalId(beneficiary.id.abs());
-
-                        return InkWell(
-                          onTap: isSyncing ? null : () => _syncBeneficiaryNow(beneficiary),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            ),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          BeneficiaryDetailScreen(beneficiary: beneficiary),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 11,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
                             decoration: BoxDecoration(
-                              color: isSyncing ? const Color(0xFF06452D) : const Color(0xFF075832),
-                              borderRadius: BorderRadius.circular(16),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: avatarGradient,
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: accentColor.withValues(alpha: 0.25),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            child: Icon(
+                              beneficiary.gender?.toLowerCase() == 'female'
+                                  ? Icons.person_2_outlined
+                                  : Icons.person_outline,
+                              color: Colors.white,
+                              size: 21,
+                            ),
+                          ),
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (isSyncing)
-                                  const SizedBox(
-                                    width: 12,
-                                    height: 12,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                  )
-                                else
-                                  const Icon(Icons.sync, color: Colors.white, size: 13),
-                                const SizedBox(width: 5),
                                 Text(
-                                  isSyncing ? 'Syncing...' : 'Sync Now',
+                                  beneficiary.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: Color(0xFF142C25),
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  beneficiary.beneficiaryCode.isEmpty
+                                      ? context.tr(
+                                          'beneficiaries.code_unavailable',
+                                        )
+                                      : beneficiary.beneficiaryCode,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Color(0xFF495C53),
                                     fontSize: 11,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        );
-                      },
-                    ),
-                ],
+                          const SizedBox(width: 6),
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.chevron_right_rounded,
+                              color: accentColor,
+                              size: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          _statusBadge(status),
+                          _statusBadge(assessment),
+                          if (status.contains('Sync Failed') ||
+                              status.contains('Pending Sync'))
+                            Builder(
+                              builder: (context) {
+                                final isSyncing =
+                                    _syncingBeneficiaryIds.contains(
+                                      beneficiary.id.abs(),
+                                    ) ||
+                                    BeneficiarySyncService.instance
+                                        .isSyncingLocalId(beneficiary.id.abs());
+
+                                return InkWell(
+                                  onTap: isSyncing
+                                      ? null
+                                      : () => _syncBeneficiaryNow(beneficiary),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 9,
+                                      vertical: 3.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSyncing
+                                          ? const Color(0xFF06452D)
+                                          : const Color(0xFF075832),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isSyncing)
+                                          const SizedBox(
+                                            width: 11,
+                                            height: 11,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        else
+                                          const Icon(
+                                            Icons.sync,
+                                            color: Colors.white,
+                                            size: 12,
+                                          ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          isSyncing
+                                              ? context.tr('common.syncing')
+                                              : context.tr(
+                                                  'beneficiaries.sync_now',
+                                                ),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Divider(
+                        height: 1,
+                        color: borderColor.withValues(alpha: 0.55),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.cake_outlined,
+                            size: 14,
+                            color: accentColor,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              LocalizedValueHelper.formatAge(
+                                context,
+                                beneficiary.age,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF42544C),
+                                fontSize: 11.5,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.phone_outlined,
+                            size: 14,
+                            color: accentColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            (beneficiary.mobile != null &&
+                                    beneficiary.mobile!.trim().isNotEmpty)
+                                ? beneficiary.mobile!
+                                : context.tr('beneficiaries.no_mobile'),
+                            style: const TextStyle(
+                              color: Color(0xFF42544C),
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          Icon(
+                            beneficiary.villageName != null &&
+                                    beneficiary.villageName!.isNotEmpty
+                                ? Icons.location_on_outlined
+                                : Icons.description_outlined,
+                            size: 14,
+                            color: accentColor,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              beneficiary.villageName != null &&
+                                      beneficiary.villageName!.isNotEmpty
+                                  ? '${beneficiary.villageName!}  •  ${context.tr('beneficiaries.apps_short', args: {'count': '${beneficiary.applicationCount}'})}'
+                                  : context.tr(
+                                      'beneficiaries.applications_count',
+                                      args: {
+                                        'count':
+                                            '${beneficiary.applicationCount}',
+                                      },
+                                    ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF42544C),
+                                fontSize: 11.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.88),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: borderColor.withValues(alpha: 0.7),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              context.tr('beneficiaries.view_details'),
+                              style: TextStyle(
+                                color: accentColor,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -740,39 +956,42 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
 
     final Color color;
     final Color fill;
+    final Color border;
 
     if (normalized.contains('completed') ||
         normalized == 'assessed' ||
         normalized == 'approved') {
-      color = const Color(0xFF087443);
-      fill = const Color(0xFFE5F5EA);
+      color = const Color(0xFF0A7D43);
+      fill = Colors.white.withValues(alpha: 0.92);
+      border = const Color(0xFF7BE3A6);
     } else if (normalized.contains('pending') ||
         normalized.contains('progress')) {
-      color = const Color(0xFF996515);
-      fill = const Color(0xFFFFF4D8);
+      color = const Color(0xFFC25E00);
+      fill = Colors.white.withValues(alpha: 0.92);
+      border = const Color(0xFFFFC178);
     } else if (normalized == 'matched') {
-      color = const Color(0xFF2457A7);
-      fill = const Color(0xFFE8F0FF);
+      color = const Color(0xFF0B62D6);
+      fill = Colors.white.withValues(alpha: 0.92);
+      border = const Color(0xFF8ECAFF);
     } else {
-      color = const Color(0xFF58665E);
-      fill = const Color(0xFFF0F3F1);
+      color = const Color(0xFF4B5C53);
+      fill = Colors.white.withValues(alpha: 0.9);
+      border = const Color(0xFFD0DBD5);
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 9,
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: fill,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border, width: 0.8),
       ),
       child: Text(
-        status,
+        LocalizedValueHelper.translateStatus(context, status),
         style: TextStyle(
           color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -783,11 +1002,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
       padding: const EdgeInsets.symmetric(vertical: 50),
       child: Column(
         children: [
-          const Icon(
-            Icons.people_outline,
-            size: 55,
-            color: Colors.blueGrey,
-          ),
+          const Icon(Icons.people_outline, size: 55, color: Colors.blueGrey),
           const SizedBox(height: 12),
           Text(
             context.tr('beneficiaries.no_beneficiaries'),

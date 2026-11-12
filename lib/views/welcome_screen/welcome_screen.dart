@@ -76,7 +76,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      SizedBox(height: compact ? 12 : 18),
 
                       Text(
                         context.tr('common.app_name'),
@@ -101,7 +101,20 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
 
-                      SizedBox(height: compact ? 16 : 24),
+                      SizedBox(height: compact ? 10 : 14),
+
+                      Text(
+                        context.tr('welcome.subtitle'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: compact ? 13 : 14,
+                          height: 1.4,
+                          fontWeight: FontWeight.w500,
+                          color: textColor,
+                        ),
+                      ),
+
+                      SizedBox(height: compact ? 14 : 22),
 
                       // Feature cards
                       Row(
@@ -110,7 +123,7 @@ class WelcomeScreen extends StatelessWidget {
                           Expanded(
                             child: _FeatureItem(
                               icon: Icons.manage_search,
-                              label: context.tr('dashboard.check_eligibility'),
+                              label: context.tr('welcome.feature_check_eligibility'),
                               circleSize: featureCircleSize,
                               fontSize: featureFontSize,
                             ),
@@ -118,7 +131,7 @@ class WelcomeScreen extends StatelessWidget {
                           Expanded(
                             child: _FeatureItem(
                               icon: Icons.edit_note,
-                              label: context.tr('dashboard.register_beneficiary'),
+                              label: context.tr('welcome.feature_apply_track'),
                               circleSize: featureCircleSize,
                               fontSize: featureFontSize,
                             ),
@@ -126,7 +139,7 @@ class WelcomeScreen extends StatelessWidget {
                           Expanded(
                             child: _FeatureItem(
                               icon: Icons.volunteer_activism_outlined,
-                              label: context.tr('dashboard.followups'),
+                              label: context.tr('welcome.feature_confirm_benefits'),
                               circleSize: featureCircleSize,
                               fontSize: featureFontSize,
                             ),
@@ -211,7 +224,7 @@ class WelcomeScreen extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFFE5F1E6).withOpacity(0.45),
+        color: const Color(0xFFE5F1E6).withValues(alpha: 0.45),
       ),
     );
   }
