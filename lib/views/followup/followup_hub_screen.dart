@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../data/models/followup_model.dart';
+import '../../data/repository/followup_repository.dart';
 import '../../viewModels/followup_viewmodel.dart';
 import 'beneficiary_followup_screen.dart';
 import 'record_followup_sheet.dart';
 
 class FollowupHubScreen extends StatefulWidget {
   final String? initialDueFilter;
+  final FollowupRepository? repository;
 
   const FollowupHubScreen({
     super.key,
     this.initialDueFilter,
+    this.repository,
   });
 
   @override
@@ -29,7 +32,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
   @override
   void initState() {
     super.initState();
-    _viewModel = FollowupViewModel();
+    _viewModel = FollowupViewModel(repository: widget.repository);
     _viewModel.addListener(_onViewModelChanged);
     _viewModel.initialize(initialDueFilter: widget.initialDueFilter);
 
@@ -476,6 +479,10 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
 
   Widget _buildFollowupCard(FollowupRegisterItem item) {
     final status = item.status;
+    final normalizedStatus = status.trim().toLowerCase();
+    final isComplete =
+        normalizedStatus == 'complete' || normalizedStatus == 'completed';
+    final isApplied = normalizedStatus == 'applied';
     final isDocIssue = (item.pendingReason?.toLowerCase().contains('doc') ?? false);
 
     final List<Color> gradientColors;
@@ -484,7 +491,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
     final Color statusColor;
     final String statusLabel;
 
-    if (status == 'Complete') {
+    if (isComplete) {
       gradientColors = const [
         Color(0xFFD5FDE4),
         Color(0xFFF5FFF9),
@@ -494,7 +501,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
       borderCol = const Color(0xFF6CE29D);
       statusColor = const Color(0xFF0B8A54);
       statusLabel = 'Complete';
-    } else if (status == 'Applied') {
+    } else if (isApplied) {
       gradientColors = const [
         Color(0xFFD1EBFF),
         Color(0xFFF4FAFF),
@@ -580,6 +587,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                       builder: (_) => BeneficiaryFollowupScreen(
                         beneficiaryId: item.beneficiaryId,
                         beneficiaryName: item.beneficiaryName,
+                        repository: widget.repository,
                       ),
                     ),
                   ).then((_) => _viewModel.loadRegister(refresh: true));
@@ -734,6 +742,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                                     builder: (_) => BeneficiaryFollowupScreen(
                                       beneficiaryId: item.beneficiaryId,
                                       beneficiaryName: item.beneficiaryName,
+                                      repository: widget.repository,
                                     ),
                                   ),
                                 ).then(
@@ -759,51 +768,69 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                final updated = await RecordFollowupSheet.show(
-                                  context,
-                                  beneficiaryId: item.beneficiaryId,
-                                  beneficiaryName: item.beneficiaryName,
-                                  schemeId: item.schemeId,
-                                  schemeName: item.schemeName,
-                                  existingFollowup: SchemeFollowupDetail(
-                                    id: item.followupId,
-                                    status: item.status,
-                                    pendingReason: item.pendingReason,
-                                    documentIssueName: item.documentIssue,
-                                    applicationNumber: item.applicationNumber,
-                                    submissionDate: item.submissionDate,
-                                    benefitReceivedDate:
-                                        item.benefitReceivedDate,
-                                    nextFollowupDate: item.nextFollowupDate,
-                                    notes: item.notes,
+                            child: AbsorbPointer(
+                              absorbing: isComplete,
+                              child: ElevatedButton.icon(
+                                onPressed: isComplete
+                                    ? null
+                                    : () async {
+                                        final updated =
+                                            await RecordFollowupSheet.show(
+                                          context,
+                                          beneficiaryId: item.beneficiaryId,
+                                          beneficiaryName: item.beneficiaryName,
+                                          schemeId: item.schemeId,
+                                          schemeName: item.schemeName,
+                                          repository: widget.repository,
+                                          existingFollowup: SchemeFollowupDetail(
+                                            id: item.followupId,
+                                            status: item.status,
+                                            pendingReason: item.pendingReason,
+                                            documentIssueName:
+                                                item.documentIssue,
+                                            applicationNumber:
+                                                item.applicationNumber,
+                                            submissionDate: item.submissionDate,
+                                            benefitReceivedDate:
+                                                item.benefitReceivedDate,
+                                            nextFollowupDate:
+                                                item.nextFollowupDate,
+                                            notes: item.notes,
+                                          ),
+                                        );
+                                        if (updated == true) {
+                                          _viewModel.initialize();
+                                        }
+                                      },
+                                icon: Icon(
+                                  isComplete
+                                      ? Icons.verified_rounded
+                                      : Icons.check_circle_outline,
+                                  size: 16,
+                                ),
+                                label: Text(
+                                  isComplete ? 'Completed' : 'Take Follow-up',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
                                   ),
-                                );
-                                if (updated == true) {
-                                  _viewModel.initialize();
-                                }
-                              },
-                              icon: const Icon(
-                                Icons.check_circle_outline,
-                                size: 16,
-                              ),
-                              label: const Text(
-                                'Take Follow-up',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
                                 ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: statusColor,
-                                foregroundColor: Colors.white,
-                                elevation: 2,
-                                shadowColor: statusColor.withValues(alpha: 0.4),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: statusColor,
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor:
+                                      const Color(0xFFD2F5DF),
+                                  disabledForegroundColor:
+                                      const Color(0xFF0B8A54),
+                                  elevation: isComplete ? 0 : 2,
+                                  shadowColor:
+                                      statusColor.withValues(alpha: 0.4),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 9),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 9),
                               ),
                             ),
                           ),

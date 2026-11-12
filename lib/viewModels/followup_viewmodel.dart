@@ -3,7 +3,10 @@ import '../data/models/followup_model.dart';
 import '../data/repository/followup_repository.dart';
 
 class FollowupViewModel extends ChangeNotifier {
-  final FollowupRepository _repository = FollowupRepository();
+  final FollowupRepository _repository;
+
+  FollowupViewModel({FollowupRepository? repository})
+      : _repository = repository ?? FollowupRepository();
 
   // Dashboard state
   FollowupDashboardData? _dashboardData;
