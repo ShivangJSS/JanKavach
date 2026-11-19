@@ -206,12 +206,16 @@
     "monthly_income": "Monthly Income Band",
     "has_bank_account": "Has active Bank Account?",
     "doc_aadhaar": "Aadhaar Card",
+    "doc_bank_account": "Bank Account Details",
     "doc_pan": "PAN Card",
     "doc_voter": "Voter ID Card",
     "doc_ration": "Ration Card",
     "doc_income_cert": "Income Certificate",
     "doc_caste_cert": "Caste Certificate",
     "doc_disability_card": "Disability Certificate / UDID",
+    "doc_residence": "Residence / Domicile Certificate",
+    "doc_medical": "Medical Records",
+    "doc_fir": "FIR / Police Report Copy",
     "confirmation_declaration": "I confirm that the information provided is correct to the best of my knowledge. I understand that this data will be used for identifying eligible social security schemes.",
     "privacy_consent": "I agree to the collection and processing of personal data for social welfare and scheme delivery purposes in accordance with government data protection norms.",
     "draft_saved_msg": "Draft saved locally on this device.",
@@ -315,7 +319,12 @@
     "source_website": "Source Website",
     "application_url": "Online Application Link",
     "apply_online": "Apply Online",
-    "view_details": "View Scheme Details"
+    "view_details": "View Scheme Details",
+    "available_documents": "Available Documents",
+    "missing_documents": "Missing Documents",
+    "mandatory": "Mandatory",
+    "no_available_docs": "No available documents found for this scheme.",
+    "no_missing_docs": "No missing documents found for this scheme."
   },
   "followup": {
     "title": "Beneficiary Follow-ups",
@@ -405,7 +414,14 @@
     "remarks": "Remarks",
     "last_assessed": "Last assessed",
     "last_matched": "Last matched",
-    "track_followups": "Track Scheme Follow-ups"
+    "track_followups": "Track Scheme Follow-ups",
+    "section_documents": "Available Documents",
+    "no_documents": "No Documents Available",
+    "no_documents_msg": "No documents available for this beneficiary yet.",
+    "loading_documents": "Loading documents...",
+    "doc_number": "Doc No: {number}",
+    "view_document": "View Document",
+    "doc_available": "Available"
   },
   "profile": {
     "title": "My Profile",

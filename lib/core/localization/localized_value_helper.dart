@@ -86,6 +86,11 @@ class LocalizedValueHelper {
     'potentially eligible': 'eligibility.potentially_eligible_badge',
     'aadhaar card': 'registration.doc_aadhaar',
     'aadhaar': 'registration.doc_aadhaar',
+    'bank account details': 'registration.doc_bank_account',
+    'bank account': 'registration.doc_bank_account',
+    'bank passbook': 'registration.doc_bank_account',
+    'bank passbook details': 'registration.doc_bank_account',
+    'bank details': 'registration.doc_bank_account',
     'pan card': 'registration.doc_pan',
     'pan': 'registration.doc_pan',
     'voter id': 'registration.doc_voter',
@@ -95,6 +100,30 @@ class LocalizedValueHelper {
     'income certificate': 'registration.doc_income_cert',
     'caste certificate': 'registration.doc_caste_cert',
     'disability certificate': 'registration.doc_disability_card',
+    'disability card': 'registration.doc_disability_card',
+    'udid card': 'registration.doc_disability_card',
+    'antyodaya anna yojana (aay) ration card': 'registration.doc_ration_aay',
+    'aay ration card': 'registration.doc_ration_aay',
+    'priority household (phh) ration card': 'registration.doc_ration_phh',
+    'phh ration card': 'registration.doc_ration_phh',
+    'death certificate': 'registration.doc_death',
+    'death certificate of husband/father/primary earner of family':
+        'registration.doc_death',
+    'death certificate of breadwinner': 'registration.doc_death',
+    'residence / domicile certificate': 'registration.doc_residence',
+    'residence certificate': 'registration.doc_residence',
+    'domicile certificate': 'registration.doc_residence',
+    'proof of residence': 'registration.doc_residence',
+    'residence proof': 'registration.doc_residence',
+    'address proof': 'registration.doc_residence',
+    'medical records': 'registration.doc_medical',
+    'medical report': 'registration.doc_medical',
+    'medical reports': 'registration.doc_medical',
+    'fir / police report copy': 'registration.doc_fir',
+    'fir or police complaint copy': 'registration.doc_fir',
+    'fir copy': 'registration.doc_fir',
+    'police complaint': 'registration.doc_fir',
+    'police report': 'registration.doc_fir',
     'birth certificate': 'registration.doc_birth',
   };
 
@@ -171,6 +200,73 @@ class LocalizedValueHelper {
       return context.tr(key);
     }
     return raw;
+  }
+
+  static String translateDocumentName(BuildContext context, String? rawName) {
+    if (rawName == null) return '';
+    final trimmed = rawName.trim();
+    if (trimmed.isEmpty) return '';
+
+    // 1. Direct match via optionKeys
+    final lower = trimmed.toLowerCase();
+    final key = _optionKeys[lower];
+    if (key != null) {
+      return context.tr(key);
+    }
+
+    // 2. Fuzzy / keyword match for document labels from database/catalogs
+    if (lower.contains('aadhaar')) {
+      return context.tr('registration.doc_aadhaar');
+    }
+    if (lower.contains('bank') &&
+        (lower.contains('account') ||
+            lower.contains('passbook') ||
+            lower.contains('details'))) {
+      return context.tr('registration.doc_bank_account');
+    }
+    if (lower.contains('pan card') || lower == 'pan') {
+      return context.tr('registration.doc_pan');
+    }
+    if (lower.contains('voter')) {
+      return context.tr('registration.doc_voter');
+    }
+    if (lower.contains('birth certificate') || lower.contains('age proof')) {
+      return context.tr('registration.doc_birth');
+    }
+    if (lower.contains('income cert') || lower.contains('proof of income')) {
+      return context.tr('registration.doc_income_cert');
+    }
+    if (lower.contains('caste cert')) {
+      return context.tr('registration.doc_caste_cert');
+    }
+    if (lower.contains('disability') || lower.contains('udid')) {
+      return context.tr('registration.doc_disability_card');
+    }
+    if (lower.contains('aay')) {
+      return context.tr('registration.doc_ration_aay');
+    }
+    if (lower.contains('phh')) {
+      return context.tr('registration.doc_ration_phh');
+    }
+    if (lower.contains('death cert')) {
+      return context.tr('registration.doc_death');
+    }
+    if (lower.contains('domicile') ||
+        lower.contains('residence') ||
+        lower.contains('address proof')) {
+      return context.tr('registration.doc_residence');
+    }
+    if (lower.contains('medical') || lower.contains('health record')) {
+      return context.tr('registration.doc_medical');
+    }
+    if (lower.contains('fir') || lower.contains('police')) {
+      return context.tr('registration.doc_fir');
+    }
+    if (lower.contains('ration')) {
+      return context.tr('registration.doc_ration');
+    }
+
+    return trimmed;
   }
 
   static String translateGender(

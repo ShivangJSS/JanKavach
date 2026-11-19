@@ -5,21 +5,37 @@ import '../../core/localization/localized_value_helper.dart';
 import '../../data/models/ beneficiary_model.dart';
 import '../../data/models/beneficiary_document_model.dart';
 import '../../data/repository/beneficiary_repository.dart';
+import '../../data/models/eligible_scheme_model.dart';
+import '../../data/services/eligible_schemes_repository.dart';
 import '../eligible_schemes_screen/eligible_schemes_screen.dart';
 import '../followup/beneficiary_followup_screen.dart';
 import 'document_preview_screen.dart';
+
+class _BeneficiaryAvailableDoc {
+  final String documentName;
+  final bool isAvailable;
+  final BeneficiaryDocumentModel? uploadedDoc;
+
+  const _BeneficiaryAvailableDoc({
+    required this.documentName,
+    this.isAvailable = true,
+    this.uploadedDoc,
+  });
+}
 
 class BeneficiaryDetailScreen extends StatefulWidget {
   final BeneficiaryModel beneficiary;
   final Future<Map<String, dynamic>> Function(int id)? detailsLoader;
   final Future<List<BeneficiaryDocumentModel>> Function(int id)?
   documentsLoader;
+  final Future<List<String>> Function(int id)? availableDocsLoader;
 
   const BeneficiaryDetailScreen({
     super.key,
     required this.beneficiary,
     this.detailsLoader,
     this.documentsLoader,
+    this.availableDocsLoader,
   });
 
   @override
@@ -36,6 +52,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
 
   // Documents state
   List<BeneficiaryDocumentModel> _documents = [];
+  List<_BeneficiaryAvailableDoc> _availableDocuments = [];
   bool _loadingDocuments = true;
   String? _documentsError;
 
@@ -50,7 +67,8 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
   }
 
   Future<void> _loadAll() async {
-    await Future.wait([_loadDetails(), _loadDocuments()]);
+    await _loadDetails();
+    await _loadDocuments();
   }
 
   Future<void> _loadDetails() async {
@@ -78,6 +96,88 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
     }
   }
 
+  static List<String> _extractDocsFromProfile(Map<String, dynamic>? details) {
+    if (details == null) return [];
+    final List<String> list = [];
+    final answers =
+        details['answers'] is Map ? details['answers'] as Map : null;
+
+    dynamic val(String k) => answers?[k] ?? details[k];
+
+    // Aadhaar Card
+    final hasAadhaar = val('has_aadhaar');
+    final docAadhaar = val('doc_aadhaar');
+    final aadhaarNo = details['aadhaar_number'] ?? details['aadhaar_last4'];
+    if (hasAadhaar == 1 ||
+        hasAadhaar == '1' ||
+        hasAadhaar == true ||
+        docAadhaar == 'Yes' ||
+        (aadhaarNo != null && aadhaarNo.toString().trim().isNotEmpty)) {
+      list.add('Aadhaar Card');
+    }
+
+    // Bank Account Details
+    final hasBank = val('has_bank_account');
+    if (hasBank == 1 || hasBank == '1' || hasBank == true) {
+      list.add('Bank Account Details');
+    }
+
+    // PAN Card
+    if (val('doc_pan') == 'Yes') list.add('PAN Card');
+
+    // Voter ID Card
+    if (val('doc_voter_id') == 'Yes' || val('doc_voter') == 'Yes') {
+      list.add('Voter ID Card');
+    }
+
+    // Birth Certificate
+    if (val('doc_birth_certificate') == 'Yes' || val('doc_birth') == 'Yes') {
+      list.add('Birth Certificate');
+    }
+
+    // Income Certificate
+    final hasIncome = val('has_income_certificate') ?? val('doc_income');
+    if (hasIncome == 1 ||
+        hasIncome == '1' ||
+        hasIncome == true ||
+        hasIncome == 'Yes') {
+      list.add('Income Certificate');
+    }
+
+    // Caste Certificate
+    final hasCaste = val('has_caste_certificate') ?? val('doc_caste');
+    if (hasCaste == 1 ||
+        hasCaste == '1' ||
+        hasCaste == true ||
+        hasCaste == 'Yes') {
+      list.add('Caste Certificate');
+    }
+
+    // Ration cards
+    if (val('doc_ration_aay') == 'Yes') {
+      list.add('Antyodaya Anna Yojana (AAY) ration card');
+    }
+    if (val('doc_ration_phh') == 'Yes') {
+      list.add('Priority Household (PHH) ration card');
+    }
+
+    // Disability Card
+    final hasDisability = val('doc_disability_card') ?? val('has_disability');
+    if (hasDisability == 'Yes' ||
+        hasDisability == 1 ||
+        hasDisability == '1' ||
+        hasDisability == true) {
+      list.add('Disability Card');
+    }
+
+    // Death Certificate
+    if (val('doc_death_certificate') == 'Yes' || val('doc_death') == 'Yes') {
+      list.add('Death Certificate of Husband/Father/Primary Earner of Family');
+    }
+
+    return list;
+  }
+
   Future<void> _loadDocuments() async {
     if (!_loadingDocuments || _documentsError != null) {
       setState(() {
@@ -95,10 +195,74 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
                       widget.beneficiary.id,
                     )));
 
+      final Set<String> availableNames = {};
+
+      if (widget.availableDocsLoader != null) {
+        final customDocs =
+            await widget.availableDocsLoader!(widget.beneficiary.id);
+        availableNames.addAll(customDocs);
+      } else if (widget.detailsLoader == null) {
+        // Fetch available documents from eligibility check / cache (same source as Scheme Details)
+        try {
+          final eligibility =
+              await EligibleSchemesRepository().getStoredEligibility(
+            beneficiaryId: widget.beneficiary.id,
+            beneficiaryProfile: _details,
+          );
+          for (final s in [
+            ...eligibility.eligibleSchemes,
+            ...eligibility.potentiallyEligibleSchemes,
+          ]) {
+            for (final d in s.availableDocuments) {
+              if (d.documentName.trim().isNotEmpty) {
+                availableNames.add(d.documentName.trim());
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Beneficiary eligibility documents check note: $e');
+        }
+      }
+
+      // Also supplement from beneficiary registration attributes / profile
+      final profileDocs = _extractDocsFromProfile(_details);
+      availableNames.addAll(profileDocs);
+
+      // Merge into available documents representation
+      final Map<String, _BeneficiaryAvailableDoc> merged = {};
+      for (final name in availableNames) {
+        final key = name.trim().toLowerCase();
+        BeneficiaryDocumentModel? matchingUpload;
+        for (final uploaded in docs) {
+          if (uploaded.documentName.trim().toLowerCase() == key) {
+            matchingUpload = uploaded;
+            break;
+          }
+        }
+        merged[key] = _BeneficiaryAvailableDoc(
+          documentName: name.trim(),
+          isAvailable: true,
+          uploadedDoc: matchingUpload,
+        );
+      }
+
+      // Any uploaded document record not yet in map
+      for (final uploaded in docs) {
+        final key = uploaded.documentName.trim().toLowerCase();
+        if (!merged.containsKey(key)) {
+          merged[key] = _BeneficiaryAvailableDoc(
+            documentName: uploaded.documentName.trim(),
+            isAvailable: true,
+            uploadedDoc: uploaded,
+          );
+        }
+      }
+
       if (!mounted) return;
 
       setState(() {
         _documents = docs;
+        _availableDocuments = merged.values.toList();
         _loadingDocuments = false;
         _documentsError = null;
       });
@@ -280,7 +444,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
   }
 
   Widget _buildDocumentsSection() {
-    if (_loadingDocuments && _documents.isEmpty) {
+    if (_loadingDocuments && _availableDocuments.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -289,18 +453,18 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Colors.grey.shade200),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
+            const SizedBox(
               width: 18,
               height: 18,
               child: CircularProgressIndicator(strokeWidth: 2.2, color: _green),
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Text(
-              'Loading documents...',
-              style: TextStyle(
+              context.tr('beneficiary_detail.loading_documents'),
+              style: const TextStyle(
                 fontSize: 13,
                 color: Color(0xFF556059),
                 fontWeight: FontWeight.w500,
@@ -311,7 +475,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
       );
     }
 
-    if (_documentsError != null && _documents.isEmpty) {
+    if (_documentsError != null && _availableDocuments.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(18),
@@ -337,9 +501,9 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
             TextButton.icon(
               onPressed: _loadDocuments,
               icon: const Icon(Icons.refresh, size: 16, color: _green),
-              label: const Text(
-                'Retry',
-                style: TextStyle(
+              label: Text(
+                context.tr('beneficiary_detail.try_again'),
+                style: const TextStyle(
                   color: _green,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
@@ -351,7 +515,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
       );
     }
 
-    if (_documents.isEmpty) {
+    if (_availableDocuments.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
@@ -376,9 +540,9 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'No Documents Uploaded',
-              style: TextStyle(
+            Text(
+              context.tr('beneficiary_detail.no_documents'),
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF16231C),
@@ -386,7 +550,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'No documents have been uploaded for this beneficiary yet.',
+              context.tr('beneficiary_detail.no_documents_msg'),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
             ),
@@ -396,19 +560,39 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
     }
 
     return Column(
-      children: _documents.map((doc) {
+      children: _availableDocuments.map((item) {
+        final doc = item.uploadedDoc;
+        final translatedTitle = LocalizedValueHelper.translateDocumentName(
+          context,
+          item.documentName,
+        );
+
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(color: const Color(0xFFDCEAE1)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildDocumentIcon(doc),
+              doc != null
+                  ? _buildDocumentIcon(doc)
+                  : Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5F5EA),
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle_outline,
+                        color: _green,
+                        size: 24,
+                      ),
+                    ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -418,7 +602,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            doc.documentName,
+                            translatedTitle,
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -429,14 +613,43 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        _statusChip(doc.verificationStatus, doc.statusColor),
+                        doc != null
+                            ? _statusChip(
+                                LocalizedValueHelper.translateStatus(
+                                  context,
+                                  doc.verificationStatus,
+                                ),
+                                doc.statusColor,
+                              )
+                            : Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE3F3E8),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  context
+                                      .tr('beneficiary_detail.doc_available'),
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: _green,
+                                  ),
+                                ),
+                              ),
                       ],
                     ),
-                    if (doc.documentNumber != null &&
-                        doc.documentNumber!.isNotEmpty) ...[
+                    if (doc?.documentNumber != null &&
+                        doc!.documentNumber!.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Text(
-                        'Doc No: ${doc.documentNumber!}',
+                        context.tr(
+                          'beneficiary_detail.doc_number',
+                          args: {'number': doc.documentNumber!},
+                        ),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -444,54 +657,58 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 2,
-                      children: [
-                        Text(
-                          doc.fileFormatLabel,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: doc.isPdf
-                                ? const Color(0xFFD32F2F)
-                                : (doc.isImage
-                                      ? const Color(0xFF1976D2)
-                                      : _green),
-                          ),
-                        ),
-                        if (doc.fileSize != null && doc.fileSize!.isNotEmpty)
+                    if (doc != null) ...[
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 2,
+                        children: [
                           Text(
-                            '• ${doc.fileSize!}',
+                            doc.fileFormatLabel,
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.grey.shade500,
+                              fontWeight: FontWeight.w700,
+                              color: doc.isPdf
+                                  ? const Color(0xFFD32F2F)
+                                  : (doc.isImage
+                                        ? const Color(0xFF1976D2)
+                                        : _green),
                             ),
                           ),
-                        if (doc.formattedUploadDate != null)
-                          Text(
-                            '• ${doc.formattedUploadDate!}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade500,
+                          if (doc.fileSize != null && doc.fileSize!.isNotEmpty)
+                            Text(
+                              '• ${doc.fileSize!}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade500,
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
+                          if (doc.formattedUploadDate != null)
+                            Text(
+                              '• ${doc.formattedUploadDate!}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                tooltip: 'Preview Document',
-                icon: const Icon(
-                  Icons.visibility_outlined,
-                  color: _green,
-                  size: 22,
+              if (doc != null) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: context.tr('beneficiary_detail.view_document'),
+                  icon: const Icon(
+                    Icons.visibility_outlined,
+                    color: _green,
+                    size: 22,
+                  ),
+                  onPressed: () => _openDocumentPreview(doc),
                 ),
-                onPressed: () => _openDocumentPreview(doc),
-              ),
+              ],
             ],
           ),
         );
@@ -783,8 +1000,11 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
             ),
           ]),
 
-          // Existing Documents Section
-          _sectionTitle('Existing Documents', Icons.folder_shared_outlined),
+          // Available Documents Section
+          _sectionTitle(
+            context.tr('beneficiary_detail.section_documents'),
+            Icons.folder_shared_outlined,
+          ),
           _buildDocumentsSection(),
 
           const SizedBox(height: 24),

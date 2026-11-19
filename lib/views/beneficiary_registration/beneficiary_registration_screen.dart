@@ -3080,6 +3080,8 @@ class _BeneficiaryRegistrationScreenState
       return Text(
         context.tr('registration.draft_not_saved'),
         style: const TextStyle(color: Colors.red, fontSize: 11),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       );
     }
 
@@ -3093,7 +3095,14 @@ class _BeneficiaryRegistrationScreenState
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           const SizedBox(width: 6),
-          Text(context.tr('common.saving_draft'), style: const TextStyle(fontSize: 11)),
+          Flexible(
+            child: Text(
+              context.tr('common.saving_draft'),
+              style: const TextStyle(fontSize: 11),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       );
     }
@@ -3104,7 +3113,14 @@ class _BeneficiaryRegistrationScreenState
         children: [
           const Icon(Icons.check_circle, size: 14, color: green),
           const SizedBox(width: 4),
-          Text(context.tr('registration.draft_saved_msg'), style: const TextStyle(fontSize: 11)),
+          Flexible(
+            child: Text(
+              context.tr('registration.draft_saved_msg'),
+              style: const TextStyle(fontSize: 11),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       );
     }
@@ -3112,6 +3128,8 @@ class _BeneficiaryRegistrationScreenState
     return Text(
       context.tr('registration.draft_not_saved'),
       style: const TextStyle(fontSize: 11, color: Colors.grey),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
     );
   }
 
@@ -3240,15 +3258,28 @@ class _BeneficiaryRegistrationScreenState
                   vertical: 4,
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildDraftStatus(),
-                    if (_localDraftId != null)
+                    Expanded(
+                      child: _buildDraftStatus(),
+                    ),
+                    if (_localDraftId != null) ...[
+                      const SizedBox(width: 8),
                       OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
                         onPressed: () => _restoreDraft(_localDraftId!),
-                        icon: const Icon(Icons.refresh, size: 18),
-                        label: Text(context.tr('registration.reload_draft')),
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: Text(
+                          context.tr('registration.reload_draft'),
+                          style: const TextStyle(fontSize: 11.5),
+                        ),
                       ),
+                    ],
                   ],
                 ),
               ),

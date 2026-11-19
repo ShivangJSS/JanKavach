@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kavach/core/localization/app_localizations.dart';
@@ -8,6 +9,7 @@ import 'package:kavach/views/beneficiary_detail_screen/beneficiary_detail_screen
 
 Widget _wrapWithLocale(Locale locale, Widget child) {
   return MaterialApp(
+    key: UniqueKey(),
     locale: locale,
     supportedLocales: const [
       Locale('en'),
@@ -22,6 +24,22 @@ Widget _wrapWithLocale(Locale locale, Widget child) {
     ],
     home: child,
   );
+}
+
+Future<void> _pumpLocalizedWidget(
+  WidgetTester tester,
+  Locale locale,
+  Widget child,
+) async {
+  rootBundle.clear();
+  await tester.pumpWidget(_wrapWithLocale(locale, child));
+  for (var i = 0; i < 15; i++) {
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
+    await tester.pump();
+  }
+  await tester.pumpAndSettle();
 }
 
 BeneficiaryModel _sampleBeneficiary() {
@@ -58,6 +76,7 @@ Map<String, dynamic> _sampleDetails() {
     'mobile': '9876543210',
     'alt_mobile': null,
     'has_aadhaar': '1',
+    'has_bank_account': '1',
     'aadhaar_last4': '1234',
     'village_name': 'Rampur',
     'post_office': 'Harhua',
@@ -93,16 +112,14 @@ void main() {
       tester,
     ) async {
       useTallPhoneViewport(tester);
-      await tester.pumpWidget(
-        _wrapWithLocale(
-          const Locale('en'),
-          BeneficiaryDetailScreen(
-            beneficiary: _sampleBeneficiary(),
-            detailsLoader: (_) async => _sampleDetails(),
-          ),
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('en'),
+        BeneficiaryDetailScreen(
+          beneficiary: _sampleBeneficiary(),
+          detailsLoader: (_) async => _sampleDetails(),
         ),
       );
-      await tester.pumpAndSettle();
 
       expect(find.text('Beneficiary Details'), findsOneWidget);
       expect(find.text('Personal Information'), findsOneWidget);
@@ -115,22 +132,26 @@ void main() {
       expect(find.text('Yes'), findsNWidgets(2));
       expect(find.text('No'), findsOneWidget);
       expect(find.text('Not provided'), findsWidgets);
+
+      // Available Documents section & items in English
+      expect(find.text('Available Documents'), findsOneWidget);
+      expect(find.text('Aadhaar Card'), findsOneWidget);
+      expect(find.text('Bank Account Details'), findsOneWidget);
+      expect(find.text('Available'), findsNWidgets(2));
     });
 
     testWidgets(
       'translates DB English values, headers, statuses, booleans and age to Hindi',
       (tester) async {
         useTallPhoneViewport(tester);
-        await tester.pumpWidget(
-          _wrapWithLocale(
-            const Locale('hi'),
-            BeneficiaryDetailScreen(
-              beneficiary: _sampleBeneficiary(),
-              detailsLoader: (_) async => _sampleDetails(),
-            ),
+        await _pumpLocalizedWidget(
+          tester,
+          const Locale('hi'),
+          BeneficiaryDetailScreen(
+            beneficiary: _sampleBeneficiary(),
+            detailsLoader: (_) async => _sampleDetails(),
           ),
         );
-        await tester.pumpAndSettle();
 
         // AppBar & section titles
         expect(find.text('लाभार्थी विवरण'), findsOneWidget);
@@ -162,41 +183,47 @@ void main() {
         expect(find.text('Father'), findsNothing);
         expect(find.text('Not provided'), findsNothing);
 
+        // Available Documents section & items in Hindi
+        expect(find.text('उपलब्ध दस्तावेज़'), findsOneWidget);
+        expect(find.text('आधार कार्ड'), findsOneWidget);
+        expect(find.text('बैंक खाता विवरण'), findsOneWidget);
+        expect(find.text('उपलब्ध'), findsNWidgets(2));
+        expect(find.text('Available Documents'), findsNothing);
+        expect(find.text('Existing Documents'), findsNothing);
+
         // Date formatting should not stay English 'Nov'
         expect(find.textContaining('Nov'), findsNothing);
 
         // Also verify offline / sync-failed / partial-match / single-letter gender / null age / numeric guard in Hindi
-        await tester.pumpWidget(
-          _wrapWithLocale(
-            const Locale('hi'),
-            BeneficiaryDetailScreen(
-              key: const ValueKey('offline-sync-failed'),
-              beneficiary: const BeneficiaryModel(
-                id: -7,
-                beneficiaryCode: 'LOCAL-0007',
-                name: '1',
-                gender: 'F',
-                age: null,
-                dob: '2001-11-15',
-                recordStatus: 'Sync Failed (422)',
-                assessmentStatus: 'pending_sync',
-              ),
-              detailsLoader: (_) async => {
-                'id': -7,
-                'beneficiary_code': 'LOCAL-0007',
-                'name': '1',
-                'gender': 'F',
-                'age': null,
-                'dob': '2001-11-15',
-                'record_status': 'Sync Failed (422)',
-                'assessment_status': 'pending_sync',
-                'relation_type': null,
-                'area_type': null,
-              },
+        await _pumpLocalizedWidget(
+          tester,
+          const Locale('hi'),
+          BeneficiaryDetailScreen(
+            key: const ValueKey('offline-sync-failed'),
+            beneficiary: const BeneficiaryModel(
+              id: -7,
+              beneficiaryCode: 'LOCAL-0007',
+              name: '1',
+              gender: 'F',
+              age: null,
+              dob: '2001-11-15',
+              recordStatus: 'Sync Failed (422)',
+              assessmentStatus: 'pending_sync',
             ),
+            detailsLoader: (_) async => {
+              'id': -7,
+              'beneficiary_code': 'LOCAL-0007',
+              'name': '1',
+              'gender': 'F',
+              'age': null,
+              'dob': '2001-11-15',
+              'record_status': 'Sync Failed (422)',
+              'assessment_status': 'pending_sync',
+              'relation_type': null,
+              'area_type': null,
+            },
           ),
         );
-        await tester.pumpAndSettle();
 
         expect(find.text('सिंक विफल रहा'), findsOneWidget);
         expect(find.text('सिंक लंबित'), findsOneWidget);
@@ -223,19 +250,17 @@ void main() {
     );
 
     testWidgets(
-      'translates DB English values, statuses, age and headers to Assamese',
+      'translates DB English values, statuses, age, headers and available documents to Assamese',
       (tester) async {
         useTallPhoneViewport(tester);
-        await tester.pumpWidget(
-          _wrapWithLocale(
-            const Locale('as'),
-            BeneficiaryDetailScreen(
-              beneficiary: _sampleBeneficiary(),
-              detailsLoader: (_) async => _sampleDetails(),
-            ),
+        await _pumpLocalizedWidget(
+          tester,
+          const Locale('as'),
+          BeneficiaryDetailScreen(
+            beneficiary: _sampleBeneficiary(),
+            detailsLoader: (_) async => _sampleDetails(),
           ),
         );
-        await tester.pumpAndSettle();
 
         expect(find.text('হিতাধিকাৰীৰ বিৱৰণ'), findsOneWidget);
         expect(find.text('ব্যক্তিগত তথ্য'), findsOneWidget);
@@ -250,7 +275,203 @@ void main() {
         expect(find.text('Personal Information'), findsNothing);
         expect(find.text('Not provided'), findsNothing);
         expect(find.textContaining('Nov'), findsNothing);
+
+        // Available Documents section & items in Assamese
+        expect(find.text('উপলব্ধ নথিপত্ৰ'), findsOneWidget);
+        expect(find.text('আধাৰ কাৰ্ড'), findsOneWidget);
+        expect(find.text('বেংক একাউণ্টৰ বিৱৰণ'), findsOneWidget);
+        expect(find.text('উপলব্ধ'), findsNWidgets(2));
+        expect(find.text('Available Documents'), findsNothing);
+        expect(find.text('Existing Documents'), findsNothing);
       },
     );
+
+    testWidgets('renders empty documents state cleanly in all 3 languages', (
+      tester,
+    ) async {
+      useTallPhoneViewport(tester);
+      final emptyDocsDetails = Map<String, dynamic>.from(_sampleDetails())
+        ..['has_aadhaar'] = '0'
+        ..['has_bank_account'] = '0'
+        ..['aadhaar_last4'] = null
+        ..['aadhaar_number'] = null;
+
+      // English empty state
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('en'),
+        BeneficiaryDetailScreen(
+          beneficiary: _sampleBeneficiary(),
+          detailsLoader: (_) async => emptyDocsDetails,
+        ),
+      );
+      expect(find.text('No Documents Available'), findsOneWidget);
+      expect(
+        find.text('No documents available for this beneficiary yet.'),
+        findsOneWidget,
+      );
+
+      // Hindi empty state
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('hi'),
+        BeneficiaryDetailScreen(
+          key: const ValueKey('empty-hi'),
+          beneficiary: _sampleBeneficiary(),
+          detailsLoader: (_) async => emptyDocsDetails,
+          availableDocsLoader: (_) async => [],
+        ),
+      );
+      expect(find.text('कोई दस्तावेज़ उपलब्ध नहीं है'), findsOneWidget);
+      expect(
+        find.text('इस लाभार्थी के लिए अभी तक कोई दस्तावेज़ उपलब्ध नहीं है।'),
+        findsOneWidget,
+      );
+
+      // Assamese empty state
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('as'),
+        BeneficiaryDetailScreen(
+          key: const ValueKey('empty-as'),
+          beneficiary: _sampleBeneficiary(),
+          detailsLoader: (_) async => emptyDocsDetails,
+          availableDocsLoader: (_) async => [],
+        ),
+      );
+      expect(find.text('কোনো নথিপত্ৰ উপলব্ধ নহয়'), findsOneWidget);
+      expect(
+        find.text('এই হিতাধিকাৰীৰ বাবে এতিয়ালৈকে কোনো নথিপত্ৰ উপলব্ধ হোৱা নাই।'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('LocalizedValueHelper.translateDocumentName translates all known docs', (
+      tester,
+    ) async {
+      late BuildContext testContext;
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('hi'),
+        Builder(
+          builder: (ctx) {
+            testContext = ctx;
+            return const SizedBox();
+          },
+        ),
+      );
+
+      expect(
+        LocalizedValueHelper.translateDocumentName(testContext, 'Aadhaar Card'),
+        'आधार कार्ड',
+      );
+      expect(
+        LocalizedValueHelper.translateDocumentName(
+          testContext,
+          'Bank Account Details',
+        ),
+        'बैंक खाता विवरण',
+      );
+      expect(
+        LocalizedValueHelper.translateDocumentName(testContext, 'PAN Card'),
+        'पैन कार्ड',
+      );
+      expect(
+        LocalizedValueHelper.translateDocumentName(testContext, 'Ration Card'),
+        'राशन कार्ड',
+      );
+      expect(
+        LocalizedValueHelper.translateDocumentName(
+          testContext,
+          'Caste Certificate',
+        ),
+        'जाति प्रमाण पत्र',
+      );
+      expect(
+        LocalizedValueHelper.translateDocumentName(
+          testContext,
+          'Disability Certificate',
+        ),
+        'दिव्यांगता प्रमाण पत्र / UDID',
+      );
+      expect(
+        LocalizedValueHelper.translateDocumentName(
+          testContext,
+          'Residence Certificate',
+        ),
+        'निवास / अधिवास प्रमाण पत्र',
+      );
+      expect(
+        LocalizedValueHelper.translateDocumentName(
+          testContext,
+          'Medical Certificate',
+        ),
+        'चिकित्सा रिकॉर्ड',
+      );
+      expect(
+        LocalizedValueHelper.translateDocumentName(testContext, 'FIR Copy'),
+        'एफआईआर / पुलिस रिपोर्ट प्रति',
+      );
+    });
+
+    testWidgets('BeneficiaryRegistration draft status row does not overflow on 360px width', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('en'),
+        Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.check_circle, size: 14, color: Color(0xFF087443)),
+                      SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          'Draft saved locally: 19 Nov 2026, 11:29:43 am',
+                          style: TextStyle(fontSize: 11),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () {},
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text(
+                    'Reload saved draft',
+                    style: TextStyle(fontSize: 11.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('Draft saved locally:'), findsOneWidget);
+      expect(find.text('Reload saved draft'), findsOneWidget);
+    });
   });
 }

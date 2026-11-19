@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/localization/app_localizations.dart';
+import '../../core/localization/localized_value_helper.dart';
 import '../../data/models/eligible_scheme_model.dart';
 import '../../data/services/whatsapp_share_service.dart';
 
@@ -222,7 +224,7 @@ class SchemeDetailsScreen extends StatelessWidget {
 
           // Available Documents
           _DocumentStatusCard(
-            title: 'Available Documents',
+            title: context.tr('eligibility.available_documents'),
             headerIcon: Icons.check_circle_outline,
             itemIcon: Icons.check_circle,
             cardBackground: const Color(0xFFF3FBF6),
@@ -230,14 +232,14 @@ class SchemeDetailsScreen extends StatelessWidget {
             accentColor: const Color(0xFF1F7A3F),
             badgeBackground: const Color(0xFFDFF4E6),
             documents: scheme.availableDocuments,
-            emptyMessage: 'No available documents found for this scheme.',
+            emptyMessage: context.tr('eligibility.no_available_docs'),
           ),
 
           const SizedBox(height: 14),
 
           // Missing Documents
           _DocumentStatusCard(
-            title: 'Missing Documents',
+            title: context.tr('eligibility.missing_documents'),
             headerIcon: Icons.warning_amber_rounded,
             itemIcon: Icons.error_outline,
             cardBackground: const Color(0xFFFFF6F6),
@@ -245,7 +247,7 @@ class SchemeDetailsScreen extends StatelessWidget {
             accentColor: const Color(0xFFC62828),
             badgeBackground: const Color(0xFFFDE4E4),
             documents: scheme.missingDocumentItems,
-            emptyMessage: 'No missing documents found for this scheme.',
+            emptyMessage: context.tr('eligibility.no_missing_docs'),
           ),
 
           // Application instructions
@@ -640,7 +642,10 @@ class _DocumentStatusCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              document.documentName,
+                              LocalizedValueHelper.translateDocumentName(
+                                context,
+                                document.documentName,
+                              ),
                               style: const TextStyle(
                                 fontSize: 14.5,
                                 fontWeight: FontWeight.w600,
@@ -659,7 +664,7 @@ class _DocumentStatusCard extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  'Mandatory',
+                                  context.tr('eligibility.mandatory'),
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
