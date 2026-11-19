@@ -67,6 +67,8 @@
     "welcome_back": "স্বাগতম,",
     "field_serviceman": "ফিল্ড কৰ্মী",
     "registered_beneficiaries": "পঞ্জীভুক্ত\nহিতাধিকাৰী",
+    "applications_submitted": "দাখিল কৰা\nআবেদন",
+    "applications_approved": "অনুমোদিত\nআবেদন",
     "eligible_schemes": "যোগ্য\nআঁচনিসমূহ",
     "followups": "বাকী থকা\nফ'ল'-আপ",
     "pending_sync": "ছিংক\nবাকী আছে",
@@ -350,7 +352,18 @@
     "schemes_count": "{count} আঁচনি",
     "take_followup": "ফ'ল'-আপ লওক (হিতাধিকাৰীক সোধক)",
     "track_benefit": "লাভ অনুসৰণ / আপডেট কৰক",
-    "update_details": "বিৱৰণ আপডেট কৰক"
+    "update_details": "বিৱৰণ আপডেট কৰক",
+    "registered_beneficiaries": "পঞ্জীভুক্ত\nহিতাধিকাৰী",
+    "total_applied_submitted": "মুঠ দাখিল কৰা\nআবেদন",
+    "pending_followups": "বাকী থকা\nফ'ল'-আপ",
+    "benefit_completed": "লাভ বিতৰণ\nসম্পূৰ্ণ",
+    "search_hint": "হিতাধিকাৰী, মোবাইল, আঁচনি সন্ধান কৰক...",
+    "not_applied_yet": "এতিয়ালৈকে আবেদন কৰা হোৱা নাই",
+    "doc_issue": "নথিপত্ৰৰ সমস্যা",
+    "next_due": "পৰৱৰ্তী ফ'ল'-আপৰ তাৰিখ",
+    "all_schemes": "সকলো আঁচনি",
+    "take_followup_btn": "ফ'ল'-আপ লওক",
+    "village_not_set": "গাঁও নিৰ্ধাৰণ কৰা হোৱা নাই"
   },
   "beneficiaries": {
     "title": "হিতাধিকাৰীসকল",
@@ -484,5 +497,7 @@
     "opens_picker": "হোৱাটছএপ যোগাযোগ বাছনি খোলক",
     "copied_fallback": "হোৱাটছএপ স্বয়ংক্ৰিয়ভাৱে খোল খাব পৰা নগ'ল। আঁচনিৰ বিৱৰণ ক্লিপবৰ্ডত কপি কৰা হ'ল!",
     "share_language_label": "শ্বেয়াৰ কৰাৰ ভাষা"
-  }
+  },
+  "Application Submitted": "দাখিল কৰা আবেদন",
+  "Application Approved": "অনুমোদিত আবেদন"
 }

@@ -67,6 +67,8 @@
     "welcome_back": "स्वागत है,",
     "field_serviceman": "फ़ील्ड सेवाकर्मी",
     "registered_beneficiaries": "पंजीकृत\nलाभार्थी",
+    "applications_submitted": "जमा किए गए\nआवेदन",
+    "applications_approved": "स्वीकृत\nआवेदन",
     "eligible_schemes": "पात्र\nयोजनाएं",
     "followups": "लंबित\nफॉलो-अप",
     "pending_sync": "लंबित\nसिंक",
@@ -350,7 +352,18 @@
     "schemes_count": "{count} योजनाएं",
     "take_followup": "फॉलो-अप लें (लाभार्थी से पूछें)",
     "track_benefit": "लाभ ट्रैक / अपडेट करें",
-    "update_details": "विवरण अपडेट करें"
+    "update_details": "विवरण अपडेट करें",
+    "registered_beneficiaries": "पंजीकृत\nलाभार्थी",
+    "total_applied_submitted": "कुल आवेदन\nजमा किए गए",
+    "pending_followups": "लंबित\nफ़ॉलो-अप",
+    "benefit_completed": "लाभ वितरण\nपूर्ण",
+    "search_hint": "लाभार्थी, मोबाइल, योजना खोजें...",
+    "not_applied_yet": "अभी आवेदन नहीं किया",
+    "doc_issue": "दस्तावेज़ समस्या",
+    "next_due": "अगला फ़ॉलो-अप देय",
+    "all_schemes": "सभी योजनाएं",
+    "take_followup_btn": "फ़ॉलो-अप लें",
+    "village_not_set": "गाँव निर्धारित नहीं"
   },
   "beneficiaries": {
     "title": "लाभार्थी",
@@ -484,5 +497,7 @@
     "opens_picker": "व्हाट्सएप संपर्क चयनकर्ता खुलेगा",
     "copied_fallback": "व्हाट्सएप स्वचालित रूप से नहीं खुला। योजना का विवरण क्लिपबोर्ड पर कॉपी किया गया!",
     "share_language_label": "साझा करने की भाषा"
-  }
+  },
+  "Application Submitted": "जमा किए गए आवेदन",
+  "Application Approved": "स्वीकृत आवेदन"
 }

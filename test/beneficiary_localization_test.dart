@@ -5,7 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kavach/core/localization/app_localizations.dart';
 import 'package:kavach/core/localization/localized_value_helper.dart';
 import 'package:kavach/data/models/%20beneficiary_model.dart';
+import 'package:kavach/data/models/followup_model.dart';
+import 'package:kavach/data/repository/followup_repository.dart';
 import 'package:kavach/views/beneficiary_detail_screen/beneficiary_detail_screen.dart';
+import 'package:kavach/views/followup/followup_hub_screen.dart';
 
 Widget _wrapWithLocale(Locale locale, Widget child) {
   return MaterialApp(
@@ -473,5 +476,155 @@ void main() {
       expect(find.textContaining('Draft saved locally:'), findsOneWidget);
       expect(find.text('Reload saved draft'), findsOneWidget);
     });
+
+    testWidgets('Dashboard cards and Followup cards translate correctly in English, Hindi, and Assamese', (
+      tester,
+    ) async {
+      // 1. English
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('en'),
+        Builder(
+          builder: (context) {
+            expect(context.tr('dashboard.applications_submitted'), 'Application\nSubmitted');
+            expect(context.tr('dashboard.applications_approved'), 'Application\nApproved');
+            expect(context.tr('followup.registered_beneficiaries'), 'Registered\nBeneficiaries');
+            expect(context.tr('followup.total_applied_submitted'), 'Total Applied\nSubmitted');
+            expect(context.tr('followup.pending_followups'), 'Pending\nFollow-ups');
+            expect(context.tr('followup.benefit_completed'), 'Benefit\nCompleted');
+            expect(context.tr('followup.all_schemes'), 'All Schemes');
+            expect(context.tr('followup.take_followup_btn'), 'Take Follow-up');
+            return const SizedBox();
+          },
+        ),
+      );
+
+      // 2. Hindi
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('hi'),
+        Builder(
+          builder: (context) {
+            expect(context.tr('dashboard.applications_submitted'), 'जमा किए गए\nआवेदन');
+            expect(context.tr('dashboard.applications_approved'), 'स्वीकृत\nआवेदन');
+            expect(context.tr('Application Submitted'), 'जमा किए गए आवेदन');
+            expect(context.tr('Application Approved'), 'स्वीकृत आवेदन');
+            expect(context.tr('followup.registered_beneficiaries'), 'पंजीकृत\nलाभार्थी');
+            expect(context.tr('followup.total_applied_submitted'), 'कुल आवेदन\nजमा किए गए');
+            expect(context.tr('followup.pending_followups'), 'लंबित\nफ़ॉलो-अप');
+            expect(context.tr('followup.benefit_completed'), 'लाभ वितरण\nपूर्ण');
+            expect(context.tr('followup.all_schemes'), 'सभी योजनाएं');
+            expect(context.tr('followup.take_followup_btn'), 'फ़ॉलो-अप लें');
+            return const SizedBox();
+          },
+        ),
+      );
+
+      // 3. Assamese
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('as'),
+        Builder(
+          builder: (context) {
+            expect(context.tr('dashboard.applications_submitted'), 'দাখিল কৰা\nআবেদন');
+            expect(context.tr('dashboard.applications_approved'), 'অনুমোদিত\nআবেদন');
+            expect(context.tr('Application Submitted'), 'দাখিল কৰা আবেদন');
+            expect(context.tr('Application Approved'), 'অনুমোদিত আবেদন');
+            expect(context.tr('followup.registered_beneficiaries'), 'পঞ্জীভুক্ত\nহিতাধিকাৰী');
+            expect(context.tr('followup.total_applied_submitted'), 'মুঠ দাখিল কৰা\nআবেদন');
+            expect(context.tr('followup.pending_followups'), 'বাকী থকা\nফ\'ল\'-আপ');
+            expect(context.tr('followup.benefit_completed'), 'লাভ বিতৰণ\nসম্পূৰ্ণ');
+            expect(context.tr('followup.all_schemes'), 'সকলো আঁচনি');
+            expect(context.tr('followup.take_followup_btn'), 'ফ\'ল\'-আপ লওক');
+            return const SizedBox();
+          },
+        ),
+      );
+    });
+
+    testWidgets('FollowupHubScreen renders cards and metrics in Hindi and Assamese without pixel overflow', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final fakeRepo = _TestFollowupRepo();
+
+      // Test Hindi UI
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('hi'),
+        FollowupHubScreen(repository: fakeRepo),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('पंजीकृत\nलाभार्थी'), findsOneWidget);
+      expect(find.text('कुल आवेदन\nजमा किए गए'), findsOneWidget);
+      expect(find.text('लंबित\nफ़ॉलो-अप'), findsOneWidget);
+      expect(find.text('लाभ वितरण\nपूर्ण'), findsOneWidget);
+      expect(find.text('सभी योजनाएं'), findsOneWidget);
+
+      // Test Assamese UI
+      await _pumpLocalizedWidget(
+        tester,
+        const Locale('as'),
+        FollowupHubScreen(repository: fakeRepo),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('পঞ্জীভুক্ত\nহিতাধিকাৰী'), findsOneWidget);
+      expect(find.text('মুঠ দাখিল কৰা\nআবেদন'), findsOneWidget);
+      expect(find.text('বাকী থকা\nফ\'ল\'-আপ'), findsOneWidget);
+      expect(find.text('লাভ বিতৰণ\nসম্পূৰ্ণ'), findsOneWidget);
+      expect(find.text('সকলো আঁচনি'), findsOneWidget);
+    });
   });
+}
+
+class _TestFollowupRepo extends FollowupRepository {
+  @override
+  Future<FollowupDashboardData> getDashboardMetrics() async {
+    return const FollowupDashboardData(
+      totalUsersRegistered: 12,
+      totalApplied: 8,
+      pending: 4,
+      complete: 6,
+      notAppliedYet: 2,
+      applicationPending: 1,
+      documentIssue: 1,
+      verificationPending: 0,
+      overdue: 0,
+      today: 1,
+      upcoming: 2,
+    );
+  }
+
+  @override
+  Future<FollowupRegisterResponse> getRegister({
+    int page = 1,
+    int perPage = 20,
+    String status = 'all',
+    String? search,
+    String? pendingReason,
+    String dueFilter = 'all',
+  }) async {
+    return const FollowupRegisterResponse(
+      items: [
+        FollowupRegisterItem(
+          followupId: 201,
+          beneficiaryId: 1,
+          beneficiaryCode: 'JK-001',
+          beneficiaryName: 'Sita Devi',
+          schemeId: 10,
+          schemeCode: 'SCH-010',
+          schemeName: 'Old Age Pension',
+          status: 'Applied',
+          applicationNumber: 'APP-9988',
+        ),
+      ],
+      currentPage: 1,
+      totalItems: 1,
+      totalPages: 1,
+    );
+  }
 }

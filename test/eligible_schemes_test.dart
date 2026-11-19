@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kavach/data/models/eligible_scheme_model.dart';
+import 'package:kavach/data/services/storage_service.dart';
 
 void main() {
   group('Eligible Schemes Parsing Tests', () {
@@ -295,6 +297,156 @@ void main() {
       expect(scheme.validApplicationUrl, isNull);
       expect(scheme.actionUrl, equals('https://wcd.nic.in/scheme'));
       expect(scheme.actionLabel, equals('Visit Official Website'));
+    });
+
+    test('Applied schemes survey restricts candidates to 100% eligible schemes only and excludes potential schemes', () {
+      const eligibleSchemes = [
+        EligibleSchemeModel(
+          schemeId: 1,
+          schemeCode: 'JK-SCH-0001',
+          schemeName: 'Fully Eligible Scheme A',
+          eligibilityStatus: 'Eligible',
+          matchPercent: 100.0,
+        ),
+        EligibleSchemeModel(
+          schemeId: 2,
+          schemeCode: 'JK-SCH-0002',
+          schemeName: 'Fully Eligible Scheme B',
+          eligibilityStatus: 'Eligible',
+          matchPercent: 100.0,
+        ),
+      ];
+
+      const potentialSchemes = [
+        EligibleSchemeModel(
+          schemeId: 3,
+          schemeCode: 'JK-SCH-0003',
+          schemeName: 'Potential Scheme C',
+          eligibilityStatus: 'Potentially Eligible',
+          matchPercent: 80.0,
+        ),
+        EligibleSchemeModel(
+          schemeId: 4,
+          schemeCode: 'JK-SCH-0004',
+          schemeName: 'Potential Scheme D',
+          eligibilityStatus: 'Potentially Eligible',
+          matchPercent: 70.0,
+        ),
+      ];
+
+      // In survey view: only 100% eligible schemes are presented
+      final surveySchemes = eligibleSchemes;
+      expect(surveySchemes.length, 2);
+      expect(surveySchemes.every((s) => s.eligibilityStatus == 'Eligible'), isTrue);
+      expect(surveySchemes.any((s) => s.eligibilityStatus == 'Potentially Eligible'), isFalse);
+
+      // Beneficiary marks Scheme A as already applied
+      final selectedAppliedCodes = {'JK-SCH-0001'};
+
+      // On submit:
+      // 1. Filtered eligible schemes exclude Scheme A
+      final remainingEligible = eligibleSchemes
+          .where((s) => !selectedAppliedCodes.contains(s.schemeCode))
+          .toList();
+      expect(remainingEligible.length, 1);
+      expect(remainingEligible.first.schemeCode, 'JK-SCH-0002');
+
+      // 2. Potentially eligible schemes are 100% preserved
+      final remainingPotential = potentialSchemes;
+      expect(remainingPotential.length, 2);
+      expect(remainingPotential.map((s) => s.schemeCode), containsAll(['JK-SCH-0003', 'JK-SCH-0004']));
+    });
+
+    test('Zero 100% eligible schemes bypasses survey and presents potential schemes directly', () {
+      const eligibleSchemes = <EligibleSchemeModel>[];
+      const potentialSchemes = [
+        EligibleSchemeModel(
+          schemeId: 5,
+          schemeCode: 'JK-SCH-0005',
+          schemeName: 'Potential Scheme Only',
+          eligibilityStatus: 'Potentially Eligible',
+          matchPercent: 65.0,
+        ),
+      ];
+
+      // Condition used in _buildSchemesContent: !_isSurveySubmitted && eligible.isNotEmpty
+      const isSurveySubmitted = false;
+      final shouldShowSurvey = !isSurveySubmitted && eligibleSchemes.isNotEmpty;
+
+      expect(shouldShowSurvey, isFalse);
+
+      // Filtered content directly available
+      final selectedAppliedCodes = <String>{};
+      final remainingEligible = eligibleSchemes
+          .where((s) => !selectedAppliedCodes.contains(s.schemeCode))
+          .toList();
+      final remainingPotential = potentialSchemes;
+
+      expect(remainingEligible, isEmpty);
+      expect(remainingPotential.length, 1);
+      expect(remainingPotential.first.schemeCode, 'JK-SCH-0005');
+    });
+
+    test('Applied schemes survey is shown only on first evaluation and bypassed on subsequent opens', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+
+      const beneficiaryId = 77;
+      const beneficiaryCode = 'JK-BEN-0077';
+
+      // 1. Initial state (first time opening beneficiary): survey has never been completed
+      final initialCompleted = await StorageService.hasCompletedAppliedSurvey(beneficiaryId, beneficiaryCode);
+      final initialCodes = await StorageService.getAppliedSchemeCodes(beneficiaryId, beneficiaryCode);
+      expect(initialCompleted, isFalse);
+      expect(initialCodes, isEmpty);
+
+      // Simulating _loadAppliedPreferences on first open:
+      var isSurveySubmitted = initialCompleted || initialCodes.isNotEmpty;
+      expect(isSurveySubmitted, isFalse); // Survey is shown on first visit
+
+      // User marks 1 scheme as applied and submits
+      await StorageService.saveAppliedSchemeCodes(
+        beneficiaryId,
+        {'JK-SCH-0001'},
+        beneficiaryCode,
+      );
+
+      // 2. Second time opening beneficiary card:
+      final subsequentCompleted = await StorageService.hasCompletedAppliedSurvey(beneficiaryId, beneficiaryCode);
+      final subsequentCodes = await StorageService.getAppliedSchemeCodes(beneficiaryId, beneficiaryCode);
+      expect(subsequentCompleted, isTrue);
+      expect(subsequentCodes, contains('JK-SCH-0001'));
+
+      // Simulating _loadAppliedPreferences on second open:
+      isSurveySubmitted = subsequentCompleted || subsequentCodes.isNotEmpty;
+      expect(isSurveySubmitted, isTrue); // Survey is bypassed, directly showing results page!
+    });
+
+    test('Applied schemes survey with none applied still marks survey as completed for subsequent opens', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+
+      const beneficiaryId = 88;
+      const beneficiaryCode = 'JK-BEN-0088';
+
+      // First open
+      expect(await StorageService.hasCompletedAppliedSurvey(beneficiaryId, beneficiaryCode), isFalse);
+
+      // User submits with 0 schemes applied ("Submit (None Applied)")
+      await StorageService.saveAppliedSchemeCodes(
+        beneficiaryId,
+        <String>{},
+        beneficiaryCode,
+      );
+
+      // Second open: survey completed flag is true even though applied codes set is empty
+      final completed = await StorageService.hasCompletedAppliedSurvey(beneficiaryId, beneficiaryCode);
+      final codes = await StorageService.getAppliedSchemeCodes(beneficiaryId, beneficiaryCode);
+      expect(completed, isTrue);
+      expect(codes, isEmpty);
+
+      final isSurveySubmitted = completed || codes.isNotEmpty;
+      expect(isSurveySubmitted, isTrue); // Bypasses survey directly to results
     });
   });
 }

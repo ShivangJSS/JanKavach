@@ -67,10 +67,13 @@ class AuthRepository {
           );
           try {
             final followupMetrics = await FollowupRepository().getDashboardMetrics();
-            final dueTotal = followupMetrics.today + followupMetrics.upcoming + followupMetrics.overdue;
-            final effectiveDue = dueTotal > 0
-                ? dueTotal
-                : (followupMetrics.pending > 0 ? followupMetrics.pending : summary.followupsDone);
+            final effectiveDue = followupMetrics.pending > 0
+                ? followupMetrics.pending
+                : (summary.followupsDone > 0
+                    ? summary.followupsDone
+                    : (followupMetrics.today +
+                        followupMetrics.upcoming +
+                        followupMetrics.overdue));
             summary = summary.copyWith(
               beneficiariesRegistered: summary.beneficiariesRegistered > 0
                   ? summary.beneficiariesRegistered

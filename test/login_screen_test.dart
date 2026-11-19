@@ -7,6 +7,7 @@ import 'package:kavach/data/providers/language_provider.dart';
 import 'package:kavach/viewModels/login_viewmodel.dart';
 import 'package:kavach/viewModels/welcome_viewmodel.dart';
 import 'package:kavach/views/login_screen/login_screen.dart';
+import 'package:kavach/views/widgets/language_selector_sheet.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -112,6 +113,63 @@ void main() {
         find.byType(Scrollable).first,
       );
       expect(scrollable.position.maxScrollExtent, equals(0.0));
+    },
+  );
+
+  testWidgets(
+    'LanguageSelectorSheet renders without pixel overflow on 360x640 screen in Hindi',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({'app_language': 'hi'});
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      rootBundle.clear();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => LanguageProvider()),
+          ],
+          child: MaterialApp(
+            locale: const Locale('hi'),
+            supportedLocales: const [Locale('en'), Locale('hi'), Locale('as')],
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => LanguageSelectorSheet.show(ctx),
+                  child: const Text('Open Sheet'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      for (var i = 0; i < 15; i++) {
+        await tester.runAsync(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        });
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open Sheet'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(LanguageSelectorSheet), findsOneWidget);
+      expect(find.text('भाषा चुनें'), findsOneWidget);
+      expect(find.text('हिन्दी'), findsOneWidget);
+      expect(find.text('অসমীয়া'), findsOneWidget);
     },
   );
 }

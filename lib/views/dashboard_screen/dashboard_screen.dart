@@ -173,12 +173,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
 
       if (followupCached != null) {
-        final dueTotal = followupCached.today +
-            followupCached.upcoming +
-            followupCached.overdue;
-        localFollowupsDue = dueTotal > 0
-            ? dueTotal
-            : (followupCached.pending > 0 ? followupCached.pending : 0);
+        localFollowupsDue = followupCached.pending > 0
+            ? followupCached.pending
+            : (followupCached.today +
+                followupCached.upcoming +
+                followupCached.overdue);
       }
     } catch (e) {
       debugPrint('Error computing local dashboard metrics: $e');
@@ -202,8 +201,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final cachedDue = cached?.followupsDone ?? 0;
-    final effectiveDue = [cachedDue, localFollowupsDue]
-        .reduce((a, b) => a > b ? a : b);
+    final effectiveDue = localFollowupsDue > 0
+        ? localFollowupsDue
+        : cachedDue;
 
     return DashboardSummary(
       beneficiariesRegistered: totalRegisteredCount > 0
@@ -247,15 +247,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
 
       if (followupMetrics != null) {
-        final dueTotal = followupMetrics.today +
-            followupMetrics.upcoming +
-            followupMetrics.overdue;
-
-        final effectiveFollowups = dueTotal > 0
-            ? dueTotal
-            : (followupMetrics.pending > 0
-                ? followupMetrics.pending
-                : summary.followupsDone);
+        final effectiveFollowups = followupMetrics.pending > 0
+            ? followupMetrics.pending
+            : (summary.followupsDone > 0
+                ? summary.followupsDone
+                : (followupMetrics.today +
+                    followupMetrics.upcoming +
+                    followupMetrics.overdue));
 
         summary = summary.copyWith(
           beneficiariesRegistered: summary.beneficiariesRegistered > 0
@@ -536,7 +534,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   glowColor: const Color(0xFFF57C00),
                   borderColor: Colors.white.withValues(alpha: 0.48),
                   value: _summary.applicationsSubmitted.toString(),
-                  label: context.tr('Application Submitted'),
+                  label: context.tr('dashboard.applications_submitted'),
                   valueColor: Colors.white,
                   labelColor: Colors.white.withValues(alpha: 0.94),
                 ),
@@ -548,7 +546,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   glowColor: const Color(0xFF1D8BFF),
                   borderColor: Colors.white.withValues(alpha: 0.48),
                   value: _summary.applicationsApproved.toString(),
-                  label: context.tr('Application Approved'),
+                  label: context.tr('dashboard.applications_approved'),
                   valueColor: Colors.white,
                   labelColor: Colors.white.withValues(alpha: 0.94),
                 ),
@@ -563,6 +561,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   label: context.tr('dashboard.followups'),
                   valueColor: Colors.white,
                   labelColor: Colors.white.withValues(alpha: 0.94),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FollowupHubScreen(),
+                      ),
+                    ).then((_) => _loadDashboardData());
+                  },
                 ),
               ],
             ),
@@ -1288,6 +1294,7 @@ class _StatCard extends StatelessWidget {
   final String label;
   final Color valueColor;
   final Color labelColor;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.icon,
@@ -1300,11 +1307,12 @@ class _StatCard extends StatelessWidget {
     required this.label,
     this.valueColor = Colors.white,
     this.labelColor = Colors.white,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1429,5 +1437,18 @@ class _StatCard extends StatelessWidget {
         ),
       ),
     );
+
+    if (onTap != null) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: card,
+        ),
+      );
+    }
+
+    return card;
   }
 }

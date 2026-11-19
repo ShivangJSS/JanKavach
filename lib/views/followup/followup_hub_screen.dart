@@ -206,7 +206,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
       childAspectRatio: 1.85,
       children: [
         _buildMetricCard(
-          label: 'Registered\nBeneficiaries',
+          label: context.tr('followup.registered_beneficiaries'),
           value: data != null ? data.totalUsersRegistered.toString() : '...',
           icon: Icons.people_outline,
           gradientColors: const [Color(0xFF28D17C), Color(0xFF0B8A54)],
@@ -214,7 +214,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
           accentColor: const Color(0xFF0A8754),
         ),
         _buildMetricCard(
-          label: 'Total Applied\nSubmitted',
+          label: context.tr('followup.total_applied_submitted'),
           value: data != null ? data.totalApplied.toString() : '...',
           icon: Icons.description_outlined,
           gradientColors: const [Color(0xFF33A3FF), Color(0xFF0B62D6)],
@@ -222,7 +222,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
           accentColor: const Color(0xFF0B62D6),
         ),
         _buildMetricCard(
-          label: 'Pending\nFollow-ups',
+          label: context.tr('followup.pending_followups'),
           value: data != null ? data.pending.toString() : '...',
           icon: Icons.pending_actions_rounded,
           gradientColors: const [Color(0xFFFFA726), Color(0xFFE65C00)],
@@ -230,7 +230,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
           accentColor: const Color(0xFFE65C00),
         ),
         _buildMetricCard(
-          label: 'Benefit\nCompleted',
+          label: context.tr('followup.benefit_completed'),
           value: data != null ? data.complete.toString() : '...',
           icon: Icons.verified_outlined,
           gradientColors: const [Color(0xFF14CFA8), Color(0xFF06846C)],
@@ -451,7 +451,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
       textInputAction: TextInputAction.search,
       onSubmitted: (val) => _viewModel.setSearch(val),
       decoration: InputDecoration(
-        hintText: 'Search beneficiary, mobile, scheme...',
+        hintText: context.tr('followup.search_hint'),
         prefixIcon: const Icon(Icons.search, color: Colors.blueGrey, size: 22),
         suffixIcon: _searchController.text.isNotEmpty
             ? IconButton(
@@ -500,7 +500,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
       avatarGradient = const [Color(0xFF28D17C), Color(0xFF0B8A54)];
       borderCol = const Color(0xFF6CE29D);
       statusColor = const Color(0xFF0B8A54);
-      statusLabel = 'Complete';
+      statusLabel = context.tr('followup.status_complete');
     } else if (isApplied) {
       gradientColors = const [
         Color(0xFFD1EBFF),
@@ -510,7 +510,8 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
       avatarGradient = const [Color(0xFF33A3FF), Color(0xFF0B62D6)];
       borderCol = const Color(0xFF6CB9FF);
       statusColor = const Color(0xFF0B62D6);
-      statusLabel = 'Applied (${item.applicationNumber ?? "CSC"})';
+      statusLabel =
+          '${context.tr('followup.status_applied')}${item.applicationNumber != null ? " (${item.applicationNumber})" : ""}';
     } else if (isDocIssue) {
       gradientColors = const [
         Color(0xFFFFE2BA),
@@ -520,7 +521,8 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
       avatarGradient = const [Color(0xFFFFA726), Color(0xFFE65C00)];
       borderCol = const Color(0xFFFFB24D);
       statusColor = const Color(0xFFE65C00);
-      statusLabel = 'Doc Issue: ${item.documentIssue ?? "Pending"}';
+      statusLabel =
+          '${context.tr('followup.doc_issue')}: ${item.documentIssue ?? context.tr('followup.pending_tab')}';
     } else {
       gradientColors = const [
         Color(0xFFFFFAF2),
@@ -530,7 +532,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
       avatarGradient = const [Color(0xFF28D17C), Color(0xFF0B8A54)];
       borderCol = const Color(0xFFFFCB8A);
       statusColor = const Color(0xFFD9700C);
-      statusLabel = item.pendingReason ?? 'Not applied yet';
+      statusLabel = item.pendingReason ?? context.tr('followup.not_applied_yet');
     }
 
     return Container(
@@ -643,8 +645,8 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  '${item.beneficiaryCode} · ${item.village ?? "Village not set"}',
+                                 Text(
+                                  '${item.beneficiaryCode} · ${item.village ?? context.tr('followup.village_not_set')}',
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: Color(0xFF4A5B52),
@@ -717,7 +719,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'Next Follow-up Due: ${item.nextFollowupDate}',
+                              '${context.tr('followup.next_due')}: ${item.nextFollowupDate}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -760,9 +762,9 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                                 ),
                                 padding: const EdgeInsets.symmetric(vertical: 9),
                               ),
-                              child: const Text(
-                                'All Schemes',
-                                style: TextStyle(fontSize: 12),
+                              child: Text(
+                                context.tr('followup.all_schemes'),
+                                style: const TextStyle(fontSize: 12),
                               ),
                             ),
                           ),
@@ -812,7 +814,9 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                                   size: 16,
                                 ),
                                 label: Text(
-                                  isComplete ? 'Completed' : 'Take Follow-up',
+                                  isComplete
+                                      ? context.tr('followup.completed_tab')
+                                      : context.tr('followup.take_followup_btn'),
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,

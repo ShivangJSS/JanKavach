@@ -133,20 +133,24 @@ void main() {
       );
 
       const followupMetrics = FollowupDashboardData(
-        totalUsersRegistered: 10,
-        totalApplied: 7,
-        complete: 4,
-        pending: 3,
-        notAppliedYet: 1,
-        applicationPending: 2,
-        documentIssue: 0,
+        totalUsersRegistered: 21,
+        totalApplied: 0,
+        complete: 10,
+        pending: 82, // Actual pending follow-up items
+        notAppliedYet: 70,
+        applicationPending: 10,
+        documentIssue: 2,
         verificationPending: 0,
         overdue: 1,
         today: 2,
-        upcoming: 1,
+        upcoming: 4, // due total = 7
       );
 
-      final dueTotal = followupMetrics.today + followupMetrics.upcoming + followupMetrics.overdue;
+      final effectiveFollowups = followupMetrics.pending > 0
+          ? followupMetrics.pending
+          : (summary.followupsDone > 0
+              ? summary.followupsDone
+              : (followupMetrics.today + followupMetrics.upcoming + followupMetrics.overdue));
 
       final merged = summary.copyWith(
         beneficiariesRegistered: summary.beneficiariesRegistered > 0
@@ -158,13 +162,13 @@ void main() {
         applicationsApproved: followupMetrics.complete > 0
             ? followupMetrics.complete
             : summary.applicationsApproved,
-        followupsDone: dueTotal > 0 ? dueTotal : followupMetrics.pending,
+        followupsDone: effectiveFollowups,
       );
 
       expect(merged.beneficiariesRegistered, equals(10));
-      expect(merged.applicationsSubmitted, equals(7)); // Dynamically populated from totalApplied
-      expect(merged.applicationsApproved, equals(4)); // Dynamically populated from complete
-      expect(merged.followupsDone, equals(4)); // Dynamically populated from overdue (1) + today (2) + upcoming (1)
+      expect(merged.applicationsSubmitted, equals(0));
+      expect(merged.applicationsApproved, equals(10)); // Dynamically populated from complete
+      expect(merged.followupsDone, equals(82)); // Populated from pending followups (82), NOT due date subset (7)
     });
 
     test('Offline local dashboard metrics calculation calculates dynamic values correctly', () {
@@ -172,37 +176,40 @@ void main() {
         beneficiariesRegistered: 10,
         applicationsSubmitted: 6,
         applicationsApproved: 3,
-        followupsDone: 4,
+        followupsDone: 7,
       );
 
       const followupCached = FollowupDashboardData(
-        totalUsersRegistered: 10,
+        totalUsersRegistered: 21,
         totalApplied: 8,
-        complete: 5,
-        pending: 2,
-        notAppliedYet: 0,
-        applicationPending: 1,
-        documentIssue: 0,
+        complete: 10,
+        pending: 82,
+        notAppliedYet: 70,
+        applicationPending: 10,
+        documentIssue: 2,
         verificationPending: 0,
         overdue: 1,
-        today: 1,
-        upcoming: 0,
+        today: 2,
+        upcoming: 4,
       );
 
       const localAppliedCount = 2;
       const localApprovedCount = 1;
-      final dueTotal = followupCached.today + followupCached.upcoming + followupCached.overdue;
+      final localFollowupsDue = followupCached.pending > 0
+          ? followupCached.pending
+          : (followupCached.today + followupCached.upcoming + followupCached.overdue);
 
       final effectiveApplied = [cached.applicationsSubmitted, followupCached.totalApplied, localAppliedCount]
           .reduce((a, b) => a > b ? a : b);
       final effectiveApproved = [cached.applicationsApproved, followupCached.complete, localApprovedCount]
           .reduce((a, b) => a > b ? a : b);
-      final effectiveDue = [cached.followupsDone, dueTotal]
-          .reduce((a, b) => a > b ? a : b);
+      final effectiveDue = localFollowupsDue > 0
+          ? localFollowupsDue
+          : cached.followupsDone;
 
       expect(effectiveApplied, equals(8)); // Max of 6, 8, 2
-      expect(effectiveApproved, equals(5)); // Max of 3, 5, 1
-      expect(effectiveDue, equals(4)); // Max of 4, 2
+      expect(effectiveApproved, equals(10)); // Max of 3, 10, 1
+      expect(effectiveDue, equals(82)); // Followup cached pending (82) takes precedence over old cached (7)
     });
 
     test('Offline dashboard calculation does NOT falsely count survey assessment_status=Complete as approved applications', () {

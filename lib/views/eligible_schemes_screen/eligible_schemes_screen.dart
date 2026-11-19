@@ -34,6 +34,7 @@ class _EligibleSchemesScreenState
 
   late final EligibleSchemesViewModel _viewModel;
   bool _isSurveySubmitted = false;
+  bool _isPreferencesLoaded = false;
   final Set<String> _selectedAppliedCodes = {};
 
   Map<String, dynamic> _getBeneficiaryProfile() {
@@ -93,13 +94,21 @@ class _EligibleSchemesScreenState
   }
 
   Future<void> _loadAppliedPreferences() async {
+    final benCode = _getBeneficiaryCode();
     final codes = await StorageService.getAppliedSchemeCodes(
       widget.beneficiaryId,
-      _getBeneficiaryCode(),
+      benCode,
     );
+    final hasCompleted = (await StorageService.hasCompletedAppliedSurvey(
+      widget.beneficiaryId,
+      benCode,
+    )) || codes.isNotEmpty;
+
     if (mounted) {
       setState(() {
         _selectedAppliedCodes.addAll(codes);
+        _isSurveySubmitted = hasCompleted;
+        _isPreferencesLoaded = true;
       });
     }
   }
@@ -112,8 +121,8 @@ class _EligibleSchemesScreenState
       return _buildEmptyState();
     }
 
-    if (!_isSurveySubmitted) {
-      return _buildSurveyContent(eligible, potential);
+    if (!_isSurveySubmitted && eligible.isNotEmpty) {
+      return _buildSurveyContent(eligible);
     }
 
     return _buildFilteredSchemesContent();
@@ -169,9 +178,7 @@ class _EligibleSchemesScreenState
 
   Widget _buildSurveyContent(
     List<EligibleSchemeModel> eligible,
-    List<EligibleSchemeModel> potential,
   ) {
-    final allSchemes = [...eligible, ...potential];
 
     return RefreshIndicator(
       color: green,
@@ -247,7 +254,7 @@ class _EligibleSchemesScreenState
           Row(
             children: [
               Text(
-                context.tr('eligibility.eligible_schemes_header', args: {'count': '${allSchemes.length}'}),
+                context.tr('eligibility.eligible_schemes_header', args: {'count': '${eligible.length}'}),
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -275,7 +282,7 @@ class _EligibleSchemesScreenState
           ),
           const SizedBox(height: 10),
 
-          ...allSchemes.map((scheme) {
+          ...eligible.map((scheme) {
             final isChecked = _selectedAppliedCodes.contains(scheme.schemeCode);
             final isEligible = scheme.eligibilityStatus.toLowerCase() == 'eligible';
 
@@ -394,9 +401,7 @@ class _EligibleSchemesScreenState
     final eligible = _viewModel.eligibleSchemes
         .where((s) => !_selectedAppliedCodes.contains(s.schemeCode))
         .toList();
-    final potential = _viewModel.potentiallyEligibleSchemes
-        .where((s) => !_selectedAppliedCodes.contains(s.schemeCode))
-        .toList();
+    final potential = _viewModel.potentiallyEligibleSchemes;
 
     final summary = _viewModel.summary;
 
@@ -627,6 +632,33 @@ class _EligibleSchemesScreenState
               (scheme) => _buildSchemeCard(scheme),
             ),
             const SizedBox(height: 18),
+          ] else if (_selectedAppliedCodes.isNotEmpty) ...[
+            _sectionHeading('Eligible Schemes', 0),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE1E8E4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, color: green, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'All ${_selectedAppliedCodes.length} eligible scheme(s) marked as already applied.',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF2E5743),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
 
           if (potential.isNotEmpty) ...[
@@ -964,7 +996,7 @@ class _EligibleSchemesScreenState
         backgroundColor: green,
         foregroundColor: Colors.white,
         title: Text(
-          _isSurveySubmitted
+          _isSurveySubmitted || _viewModel.eligibleSchemes.isEmpty
               ? context.tr(
                   'eligibility.eligible_schemes_header',
                   args: {
@@ -975,7 +1007,7 @@ class _EligibleSchemesScreenState
               : context.tr('eligibility.title'),
         ),
         actions: [
-          if (_isSurveySubmitted && hasSchemes)
+          if (_isSurveySubmitted && _viewModel.eligibleSchemes.isNotEmpty)
             IconButton(
               onPressed: () {
                 setState(() {
@@ -1010,7 +1042,7 @@ class _EligibleSchemesScreenState
           const SizedBox(width: 6),
         ],
       ),
-      bottomNavigationBar: (!_isSurveySubmitted && hasSchemes)
+      bottomNavigationBar: (_isPreferencesLoaded && !_isSurveySubmitted && _viewModel.eligibleSchemes.isNotEmpty)
           ? Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -1076,7 +1108,7 @@ class _EligibleSchemesScreenState
               ),
             )
           : null,
-      body: _viewModel.isLoading && _viewModel.result == null
+      body: (!_isPreferencesLoaded || (_viewModel.isLoading && _viewModel.result == null))
           ? const Center(
         child: CircularProgressIndicator(color: green),
       )

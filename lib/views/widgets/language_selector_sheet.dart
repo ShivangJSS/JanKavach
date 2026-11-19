@@ -11,6 +11,8 @@ class LanguageSelectorSheet extends StatelessWidget {
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -25,8 +27,10 @@ class LanguageSelectorSheet extends StatelessWidget {
     final currentCode = languageProvider.currentLanguageCode;
 
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      top: false,
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,7 +39,7 @@ class LanguageSelectorSheet extends StatelessWidget {
               child: Container(
                 width: 44,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
+                margin: const EdgeInsets.only(bottom: 14),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2),
@@ -60,7 +64,7 @@ class LanguageSelectorSheet extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               context.tr('common.choose_language'),
               style: TextStyle(
@@ -68,7 +72,7 @@ class LanguageSelectorSheet extends StatelessWidget {
                 color: Colors.grey.shade600,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             ...LanguageProvider.supportedLanguages.map((lang) {
               final isSelected = lang.code == currentCode;
               return Container(
@@ -83,49 +87,54 @@ class LanguageSelectorSheet extends StatelessWidget {
                     width: isSelected ? 1.5 : 1,
                   ),
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.white,
-                    radius: 20,
-                    child: Text(
-                      lang.flag,
-                      style: const TextStyle(fontSize: 22),
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 2,
                     ),
-                  ),
-                  title: Text(
-                    lang.nativeName,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                      color: isSelected ? primaryGreen : const Color(0xFF1D2939),
+                    visualDensity: const VisualDensity(horizontal: 0, vertical: -1),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.white,
+                      radius: 20,
+                      child: Text(
+                        lang.flag,
+                        style: const TextStyle(fontSize: 22),
+                      ),
                     ),
-                  ),
-                  subtitle: Text(
-                    lang.name,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
+                    title: Text(
+                      lang.nativeName,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                        color: isSelected ? primaryGreen : const Color(0xFF1D2939),
+                      ),
                     ),
+                    subtitle: Text(
+                      lang.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: primaryGreen,
+                            size: 24,
+                          )
+                        : null,
+                    onTap: () {
+                      languageProvider.setLanguage(lang.code);
+                      Navigator.pop(context);
+                    },
                   ),
-                  trailing: isSelected
-                      ? const Icon(
-                          Icons.check_circle_rounded,
-                          color: primaryGreen,
-                          size: 24,
-                        )
-                      : null,
-                  onTap: () {
-                    languageProvider.setLanguage(lang.code);
-                    Navigator.pop(context);
-                  },
                 ),
               );
             }),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
           ],
         ),
       ),
