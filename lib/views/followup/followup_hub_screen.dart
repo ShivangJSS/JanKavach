@@ -768,9 +768,12 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: AbsorbPointer(
-                              absorbing: isComplete,
-                              child: ElevatedButton.icon(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: isComplete ? () {} : null,
+                              child: AbsorbPointer(
+                                absorbing: isComplete,
+                                child: ElevatedButton.icon(
                                 onPressed: isComplete
                                     ? null
                                     : () async {
@@ -832,6 +835,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
                                       const EdgeInsets.symmetric(vertical: 9),
                                 ),
                               ),
+                            ),
                             ),
                           ),
                         ],

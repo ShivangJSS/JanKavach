@@ -360,6 +360,7 @@ void main() {
         );
         await tester.tap(hubCompletedBtn, warnIfMissed: false);
         await tester.pumpAndSettle();
+        expect(find.byType(BeneficiaryFollowupScreen), findsNothing);
         expect(
           find.text('Has the beneficiary applied for this scheme?'),
           findsNothing,
@@ -369,9 +370,10 @@ void main() {
         await tester.scrollUntilVisible(
           find.text('Take Follow-up'),
           250,
-          scrollable: find.byWidgetPredicate(
-            (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
-          ),
+          scrollable: find.descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          ).first,
         );
         expect(find.text('Take Follow-up'), findsOneWidget);
         await tester.tap(find.text('Take Follow-up'));
