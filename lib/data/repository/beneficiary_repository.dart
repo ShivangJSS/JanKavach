@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../local/app_database.dart';
 import '../models/ beneficiary_model.dart';
+import '../models/beneficiary_document_model.dart';
 
 import '../models/dashboard_response.dart';
 import '../services/api_service.dart';
@@ -576,6 +577,72 @@ class BeneficiaryRepository {
         'Unable to load beneficiary details. '
         'No cached details are available. Details: $error',
       );
+    }
+  }
+
+  /// Fetches existing uploaded documents for the specified beneficiary.
+  /// Endpoint: GET /beneficiaries/{beneficiary_id}/documents
+  Future<List<BeneficiaryDocumentModel>> getBeneficiaryDocuments(int id) async {
+    final cacheKey = 'beneficiary_documents_$id';
+
+    if (id <= 0) {
+      // Local offline beneficiary has no server documents yet
+      return [];
+    }
+
+    try {
+      final response = await _dio.get('/beneficiaries/$id/documents');
+      final dynamic raw = response.data;
+      List<dynamic> items = [];
+
+      if (raw is Map) {
+        final body = Map<String, dynamic>.from(raw);
+        if (body['data'] is List) {
+          items = body['data'] as List;
+        } else if (body['data'] is Map) {
+          final dataMap = body['data'] as Map;
+          if (dataMap['documents'] is List) {
+            items = dataMap['documents'] as List;
+          } else if (dataMap['items'] is List) {
+            items = dataMap['items'] as List;
+          } else if (dataMap['data'] is List) {
+            items = dataMap['data'] as List;
+          }
+        } else if (body['documents'] is List) {
+          items = body['documents'] as List;
+        }
+      } else if (raw is List) {
+        items = raw;
+      }
+
+      final docs = items
+          .map((item) => BeneficiaryDocumentModel.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ))
+          .toList();
+
+      // Cache locally in SQLite for offline access
+      await _saveCache(cacheKey, {'items': items});
+
+      return docs;
+    } catch (error) {
+      debugPrint('Failed to fetch beneficiary documents online: $error');
+
+      // Offline fallback: Check SQLite cache
+      final cached = await _readCache(cacheKey);
+      if (cached != null) {
+        final dynamic cachedItems =
+            cached['items'] ?? cached['data'] ?? cached['documents'];
+        if (cachedItems is List) {
+          return cachedItems
+              .map((item) => BeneficiaryDocumentModel.fromJson(
+                    Map<String, dynamic>.from(item as Map),
+                  ))
+              .toList();
+        }
+      }
+
+      rethrow;
     }
   }
 }

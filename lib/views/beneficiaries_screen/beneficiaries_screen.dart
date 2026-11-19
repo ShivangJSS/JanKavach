@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -12,13 +11,11 @@ import '../beneficiary_detail_screen/beneficiary_detail_screen.dart';
 import '../beneficiary_registration/beneficiary_registration_screen.dart';
 import '../../data/services/beneficiary_sync_service.dart';
 
-
 class BeneficiariesScreen extends StatefulWidget {
   const BeneficiariesScreen({super.key});
 
   @override
-  State<BeneficiariesScreen> createState() =>
-      BeneficiariesScreenState();
+  State<BeneficiariesScreen> createState() => BeneficiariesScreenState();
 }
 
 class BeneficiariesScreenState extends State<BeneficiariesScreen> {
@@ -28,8 +25,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
   static const Color background = Color(0xFFF4F7F5);
 
   late final BeneficiaryViewModel _viewModel;
-  final TextEditingController _searchController =
-  TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final BeneficiaryLocalDao _localDao = BeneficiaryLocalDao();
 
@@ -65,25 +61,16 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     }
   }
 
-
   void _onSearchChanged(String value) {
     _searchDebounce?.cancel();
 
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 450),
-          () {
-        if (!mounted) return;
+    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+      if (!mounted) return;
 
-        _search = value.trim();
-        _viewModel.loadBeneficiaries(
-          refresh: true,
-          search: _search,
-        );
-      },
-    );
+      _search = value.trim();
+      _viewModel.loadBeneficiaries(refresh: true, search: _search);
+    });
   }
-
-
 
   Future<void> _loadDrafts() async {
     setState(() => _isLoadingDrafts = true);
@@ -117,11 +104,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-
-
-        builder: (_) => BeneficiaryRegistrationScreen(
-          localDraftId: localId,
-        ),
+        builder: (_) => BeneficiaryRegistrationScreen(localDraftId: localId),
       ),
     );
 
@@ -131,10 +114,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     if (result == true) {
       await _refreshList();
     }
-
   }
-
-
 
   Future<void> refreshBeneficiaries() async {
     if (!mounted) return;
@@ -143,10 +123,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
   }
 
   Future<void> _refreshList() async {
-    await _viewModel.loadBeneficiaries(
-      refresh: true,
-      search: _search,
-    );
+    await _viewModel.loadBeneficiaries(refresh: true, search: _search);
   }
 
   Future<void> _syncBeneficiaryNow(BeneficiaryModel beneficiary) async {
@@ -165,7 +142,10 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
             const SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(width: 12),
             Text(context.tr('beneficiaries.syncing_beneficiary')),
@@ -176,7 +156,8 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     );
 
     try {
-      final success = await BeneficiarySyncService.instance.syncSingleBeneficiary(localId);
+      final success = await BeneficiarySyncService.instance
+          .syncSingleBeneficiary(localId);
       if (!mounted) return;
 
       if (success) {
@@ -228,11 +209,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(child: _buildBody()),
-          ],
-        ),
+        child: Column(children: [Expanded(child: _buildBody())]),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
@@ -263,9 +240,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     if (_selectedTab == 0 &&
         _viewModel.isLoading &&
         _viewModel.beneficiaries.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(color: green),
-      );
+      return const Center(child: CircularProgressIndicator(color: green));
     }
 
     if (_selectedTab == 0 &&
@@ -283,10 +258,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                 color: Colors.blueGrey,
               ),
               const SizedBox(height: 14),
-              Text(
-                _viewModel.error!,
-                textAlign: TextAlign.center,
-              ),
+              Text(_viewModel.error!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: _refreshList,
@@ -316,15 +288,15 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 84),
         children: [
+          const SizedBox(height: 0),
+
           // Registered / Drafts tab selector
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFFD5E3DB),
-              ),
+              border: Border.all(color: const Color(0xFFD5E3DB)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.03),
@@ -346,7 +318,10 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                 ),
                 Expanded(
                   child: _buildTabButton(
-                    label: context.tr('beneficiaries.drafts_tab', args: {'count': '${_drafts.length}'}),
+                    label: context.tr(
+                      'beneficiaries.drafts_tab',
+                      args: {'count': '${_drafts.length}'},
+                    ),
                     selected: _selectedTab == 1,
                     onTap: () {
                       setState(() => _selectedTab = 1);
@@ -358,7 +333,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 9),
 
           // Show the selected tab's content
           if (_selectedTab == 0) ...[
@@ -379,7 +354,10 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                   ),
                 ),
                 Text(
-                  context.tr('beneficiaries.records_count', args: {'count': '${_viewModel.total}'}),
+                  context.tr(
+                    'beneficiaries.records_count',
+                    args: {'count': '${_viewModel.total}'},
+                  ),
                   style: const TextStyle(
                     color: Color(0xFF5A6E63),
                     fontSize: 12,
@@ -394,33 +372,23 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
             if (_viewModel.beneficiaries.isEmpty)
               _buildEmptyState()
             else
-              ..._viewModel.beneficiaries
-                  .asMap()
-                  .entries
-                  .map((entry) => _buildBeneficiaryCard(entry.value, entry.key)),
+              ..._viewModel.beneficiaries.asMap().entries.map(
+                (entry) => _buildBeneficiaryCard(entry.value, entry.key),
+              ),
 
             if (_viewModel.isLoadingMore)
               const Padding(
                 padding: EdgeInsets.all(20),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: green,
-                  ),
-                ),
+                child: Center(child: CircularProgressIndicator(color: green)),
               ),
 
-            if (_viewModel.error != null &&
-                _viewModel.beneficiaries.isNotEmpty)
+            if (_viewModel.error != null && _viewModel.beneficiaries.isNotEmpty)
               TextButton.icon(
                 onPressed: () {
-                  _viewModel.loadBeneficiaries(
-                    search: _search,
-                  );
+                  _viewModel.loadBeneficiaries(search: _search);
                 },
                 icon: const Icon(Icons.refresh),
-                label: Text(
-                  context.tr('beneficiaries.load_more_retry'),
-                ),
+                label: Text(context.tr('beneficiaries.load_more_retry')),
               ),
           ] else ...[
             _buildDraftsList(),
@@ -429,7 +397,6 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
       ),
     );
   }
-
 
   Widget _buildTabButton({
     required String label,
@@ -473,15 +440,11 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     );
   }
 
-
-
   Widget _buildDraftsList() {
     if (_isLoadingDrafts && _drafts.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(32),
-        child: Center(
-          child: CircularProgressIndicator(color: green),
-        ),
+        child: Center(child: CircularProgressIndicator(color: green)),
       );
     }
 
@@ -490,11 +453,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
         padding: const EdgeInsets.symmetric(vertical: 48),
         child: Column(
           children: [
-            const Icon(
-              Icons.drafts_outlined,
-              size: 54,
-              color: Colors.blueGrey,
-            ),
+            const Icon(Icons.drafts_outlined, size: 54, color: Colors.blueGrey),
             const SizedBox(height: 12),
             Text(
               context.tr('beneficiaries.no_drafts'),
@@ -524,9 +483,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     return Column(
       children: _drafts.map((draft) {
         final localId = draft['local_id'] as int;
-        final formData = Map<String, dynamic>.from(
-          draft['form_data'] as Map,
-        );
+        final formData = Map<String, dynamic>.from(draft['form_data'] as Map);
         final formState = Map<String, dynamic>.from(
           formData['form_state'] as Map? ?? {},
         );
@@ -534,12 +491,9 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
           formState['controllers'] as Map? ?? {},
         );
 
-        final name = controllers['Beneficiary Name']
-            ?.toString()
-            .trim();
+        final name = controllers['Beneficiary Name']?.toString().trim();
 
-        final currentStep =
-            (draft['current_step'] as num?)?.toInt() ?? 0;
+        final currentStep = (draft['current_step'] as num?)?.toInt() ?? 0;
 
         return Card(
           color: const Color(0xFFFFF4E8),
@@ -553,10 +507,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
             contentPadding: const EdgeInsets.all(14),
             leading: const CircleAvatar(
               backgroundColor: Colors.white,
-              child: Icon(
-                Icons.edit_note,
-                color: Color(0xFFD9700C),
-              ),
+              child: Icon(Icons.edit_note, color: Color(0xFFD9700C)),
             ),
             title: Text(
               name == null || name.isEmpty
@@ -572,14 +523,9 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
               child: Text(
                 context.tr(
                   'beneficiaries.draft_step_device',
-                  args: {
-                    'current': '${currentStep + 1}',
-                    'total': '6',
-                  },
+                  args: {'current': '${currentStep + 1}', 'total': '6'},
                 ),
-                style: const TextStyle(
-                  color: Color(0xFF5D6B64),
-                ),
+                style: const TextStyle(color: Color(0xFF5D6B64)),
               ),
             ),
             trailing: const Icon(
@@ -592,8 +538,6 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
       }).toList(),
     );
   }
-
-
 
   Widget _buildSearchField() {
     return Container(
@@ -667,23 +611,17 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
 
     // Alternating two harmonious glossy palettes: Soft Mint Emerald <-> Soft Sky Blue
     final List<Color> cardGradient = isAlt
-        ? const [
-            Color(0xFFCDE7FF),
-            Color(0xFFF3F9FF),
-            Color(0xFFBDDEFF),
-          ]
-        : const [
-            Color(0xFFD6FCE5),
-            Color(0xFFF4FFF9),
-            Color(0xFFC4FBD9),
-          ];
+        ? const [Color(0xFFCDE7FF), Color(0xFFF3F9FF), Color(0xFFBDDEFF)]
+        : const [Color(0xFFD6FCE5), Color(0xFFF4FFF9), Color(0xFFC4FBD9)];
     final List<Color> avatarGradient = isAlt
         ? const [Color(0xFF33A3FF), Color(0xFF0B62D6)]
         : const [Color(0xFF28D17C), Color(0xFF0B8A54)];
-    final Color borderColor =
-        isAlt ? const Color(0xFF6EB9FF) : const Color(0xFF6CE29D);
-    final Color accentColor =
-        isAlt ? const Color(0xFF0B62D6) : const Color(0xFF0B8A54);
+    final Color borderColor = isAlt
+        ? const Color(0xFF6EB9FF)
+        : const Color(0xFF6CE29D);
+    final Color accentColor = isAlt
+        ? const Color(0xFF0B62D6)
+        : const Color(0xFF0B8A54);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -735,9 +673,8 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => BeneficiaryDetailScreen(
-                        beneficiary: beneficiary,
-                      ),
+                      builder: (_) =>
+                          BeneficiaryDetailScreen(beneficiary: beneficiary),
                     ),
                   );
                 },
@@ -839,8 +776,10 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
                               status.contains('Pending Sync'))
                             Builder(
                               builder: (context) {
-                                final isSyncing = _syncingBeneficiaryIds
-                                        .contains(beneficiary.id.abs()) ||
+                                final isSyncing =
+                                    _syncingBeneficiaryIds.contains(
+                                      beneficiary.id.abs(),
+                                    ) ||
                                     BeneficiarySyncService.instance
                                         .isSyncingLocalId(beneficiary.id.abs());
 
@@ -1041,10 +980,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 3,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: fill,
         borderRadius: BorderRadius.circular(14),
@@ -1066,11 +1002,7 @@ class BeneficiariesScreenState extends State<BeneficiariesScreen> {
       padding: const EdgeInsets.symmetric(vertical: 50),
       child: Column(
         children: [
-          const Icon(
-            Icons.people_outline,
-            size: 55,
-            color: Colors.blueGrey,
-          ),
+          const Icon(Icons.people_outline, size: 55, color: Colors.blueGrey),
           const SizedBox(height: 12),
           Text(
             context.tr('beneficiaries.no_beneficiaries'),
