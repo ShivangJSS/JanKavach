@@ -716,15 +716,19 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
                 children: [
                   const Icon(Icons.calendar_today_outlined, size: 18, color: Color(0xFF1377CC)),
                   const SizedBox(width: 10),
-                  Text(
-                    'Submission Date: ${_formatDate(displayDate)}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF26352E),
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      'Submission Date: ${_formatDate(displayDate)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF26352E),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 4),
                   const Icon(Icons.arrow_drop_down, color: Colors.grey),
                 ],
               ),
@@ -879,22 +883,21 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
               ),
             ),
             const SizedBox(height: 6),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
               children: ['Missing', 'Expired', 'Invalid'].map((type) {
                 final selected = _issueType == type;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(type),
-                    selected: selected,
-                    selectedColor: const Color(0xFFD9700C),
-                    labelStyle: TextStyle(
-                      color: selected ? Colors.white : const Color(0xFF26352E),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    onSelected: (_) => setState(() => _issueType = type),
+                return ChoiceChip(
+                  label: Text(type),
+                  selected: selected,
+                  selectedColor: const Color(0xFFD9700C),
+                  labelStyle: TextStyle(
+                    color: selected ? Colors.white : const Color(0xFF26352E),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                   ),
+                  onSelected: (_) => setState(() => _issueType = type),
                 );
               }).toList(),
             ),
@@ -935,13 +938,17 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
                 children: [
                   const Icon(Icons.event_outlined, size: 18, color: Color(0xFFD9700C)),
                   const SizedBox(width: 10),
-                  Text(
-                    _nextFollowupDate == null
-                        ? 'Set Next Follow-up Date'
-                        : 'Next Visit Due: ${_formatDate(_nextFollowupDate!)}',
-                    style: const TextStyle(fontSize: 13, color: Color(0xFF26352E)),
+                  Expanded(
+                    child: Text(
+                      _nextFollowupDate == null
+                          ? 'Set Next Follow-up Date'
+                          : 'Next Visit Due: ${_formatDate(_nextFollowupDate!)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF26352E)),
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 4),
                   const Icon(Icons.arrow_drop_down, color: Colors.grey),
                 ],
               ),
@@ -993,15 +1000,19 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
                 children: [
                   const Icon(Icons.verified_outlined, size: 18, color: green),
                   const SizedBox(width: 10),
-                  Text(
-                    'Benefit Received Date: ${_formatDate(displayDate)}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF26352E),
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      'Benefit Received Date: ${_formatDate(displayDate)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF26352E),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 4),
                   const Icon(Icons.arrow_drop_down, color: Colors.grey),
                 ],
               ),

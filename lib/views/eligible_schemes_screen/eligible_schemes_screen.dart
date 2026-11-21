@@ -8,6 +8,9 @@ import '../../data/services/storage_service.dart';
 import '../../data/services/whatsapp_share_service.dart';
 import '../../viewModels/Eligible_Schemes_ViewModel.dart';
 import '../followup/beneficiary_followup_screen.dart';
+import '../widgets/app_bottom_navigation_bar.dart';
+import '../../data/models/followup_model.dart';
+import '../../data/repository/followup_repository.dart';
 
 class EligibleSchemesScreen extends StatefulWidget {
   final int beneficiaryId;
@@ -986,10 +989,6 @@ class _EligibleSchemesScreenState
 
   @override
   Widget build(BuildContext context) {
-    final hasSchemes = _viewModel.result != null &&
-        (_viewModel.eligibleSchemes.isNotEmpty ||
-            _viewModel.potentiallyEligibleSchemes.isNotEmpty);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F5),
       appBar: AppBar(
@@ -1064,17 +1063,46 @@ class _EligibleSchemesScreenState
                   height: 48,
                   child: ElevatedButton.icon(
                     onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final benCode = _getBeneficiaryCode();
                       await StorageService.saveAppliedSchemeCodes(
                         widget.beneficiaryId,
                         _selectedAppliedCodes,
-                        _getBeneficiaryCode(),
+                        benCode,
                       );
+
+                      // Sync applied followups to server in background so server marks status = Complete
+                      if (widget.beneficiaryId > 0 && _selectedAppliedCodes.isNotEmpty) {
+                        for (final code in _selectedAppliedCodes) {
+                          final scheme = _viewModel.eligibleSchemes.cast<EligibleSchemeModel?>().firstWhere(
+                            (s) => s?.schemeCode == code,
+                            orElse: () => null,
+                          );
+                          if (scheme != null && scheme.schemeId != null) {
+                            FollowupRepository().recordFollowup(
+                              RecordFollowupPayload(
+                                beneficiaryId: widget.beneficiaryId,
+                                schemeId: scheme.schemeId!,
+                                status: 'Complete',
+                                notes: 'Already applied prior to enrollment',
+                                benefitReceivedDate: DateTime.now().toIso8601String().split('T').first,
+                              ),
+                            ).then((_) {
+                              StorageService.markCanonicalFollowupSynced(
+                                benCode != null && benCode.isNotEmpty ? benCode : '${widget.beneficiaryId}',
+                                scheme.schemeCode,
+                              );
+                            }).catchError((_) {});
+                          }
+                        }
+                      }
+
                       if (!mounted) return;
                       setState(() {
                         _isSurveySubmitted = true;
                       });
                       final count = _selectedAppliedCodes.length;
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      messenger.showSnackBar(
                         SnackBar(
                           backgroundColor: green,
                           content: Text(
@@ -1107,7 +1135,7 @@ class _EligibleSchemesScreenState
                 ),
               ),
             )
-          : null,
+          : const AppBottomNavigationBar(currentIndex: 1),
       body: (!_isPreferencesLoaded || (_viewModel.isLoading && _viewModel.result == null))
           ? const Center(
         child: CircularProgressIndicator(color: green),

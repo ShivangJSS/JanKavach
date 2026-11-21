@@ -5,10 +5,10 @@ import '../../core/localization/localized_value_helper.dart';
 import '../../data/models/ beneficiary_model.dart';
 import '../../data/models/beneficiary_document_model.dart';
 import '../../data/repository/beneficiary_repository.dart';
-import '../../data/models/eligible_scheme_model.dart';
 import '../../data/services/eligible_schemes_repository.dart';
 import '../eligible_schemes_screen/eligible_schemes_screen.dart';
 import '../followup/beneficiary_followup_screen.dart';
+import '../widgets/app_bottom_navigation_bar.dart';
 import 'document_preview_screen.dart';
 
 class _BeneficiaryAvailableDoc {
@@ -51,7 +51,6 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
   String? _error;
 
   // Documents state
-  List<BeneficiaryDocumentModel> _documents = [];
   List<_BeneficiaryAvailableDoc> _availableDocuments = [];
   bool _loadingDocuments = true;
   String? _documentsError;
@@ -261,7 +260,6 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
       if (!mounted) return;
 
       setState(() {
-        _documents = docs;
         _availableDocuments = merged.values.toList();
         _loadingDocuments = false;
         _documentsError = null;
@@ -767,6 +765,7 @@ class _BeneficiaryDetailScreenState extends State<BeneficiaryDetailScreen> {
               ),
             )
           : _buildDetails(),
+      bottomNavigationBar: const AppBottomNavigationBar(currentIndex: 1),
     );
   }
 

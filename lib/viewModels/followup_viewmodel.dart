@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../data/models/followup_model.dart';
 import '../data/repository/followup_repository.dart';
+import '../data/services/storage_service.dart';
 
 class FollowupViewModel extends ChangeNotifier {
   final FollowupRepository _repository;
@@ -63,7 +64,13 @@ class FollowupViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _dashboardData = await _repository.getDashboardMetrics();
+      var data = await _repository.getDashboardMetrics();
+      final unsyncedCount = await StorageService.getUnsyncedPendingExclusionCount();
+      if (unsyncedCount > 0) {
+        final adjustedPending = (data.pending - unsyncedCount).clamp(0, double.infinity).toInt();
+        data = data.copyWith(pending: adjustedPending);
+      }
+      _dashboardData = data;
     } catch (e) {
       _dashboardError = e.toString();
     } finally {
@@ -124,7 +131,13 @@ class FollowupViewModel extends ChangeNotifier {
         search: _searchQuery,
       );
 
+      final excludedKeys = await StorageService.getGlobalExcludedFollowupKeys();
       List<FollowupRegisterItem> items = response.items;
+
+      if (excludedKeys.isNotEmpty) {
+        items = items.where((it) => !StorageService.isFollowupItemExcluded(it, excludedKeys)).toList();
+      }
+
       if (_dueFilter != 'all') {
         items = items.where((it) => matchesDueFilter(it.nextFollowupDate, _dueFilter, status: it.status)).toList();
       }
@@ -137,17 +150,45 @@ class FollowupViewModel extends ChangeNotifier {
 
       _currentPage = response.currentPage;
       _totalPages = response.totalPages;
-      if (_dueFilter != 'all') {
+      if (_dueFilter != 'all' || excludedKeys.isNotEmpty) {
         _totalItems = _registerItems.length;
       } else {
         _totalItems = response.totalItems;
       }
+
+      // Background-sync any pending items that are excluded so server DB reflects Complete
+      _syncPendingExcludedItems(response.items, excludedKeys);
     } catch (e) {
       _registerError = e.toString();
     } finally {
       _isLoadingRegister = false;
       _isLoadingMore = false;
       notifyListeners();
+    }
+  }
+
+  void _syncPendingExcludedItems(
+    List<FollowupRegisterItem> serverItems,
+    Set<String> excludedKeys,
+  ) {
+    if (excludedKeys.isEmpty) return;
+    for (final it in serverItems) {
+      if (it.status == 'Pending' && StorageService.isFollowupItemExcluded(it, excludedKeys)) {
+        _repository.recordFollowup(
+          RecordFollowupPayload(
+            beneficiaryId: it.beneficiaryId,
+            schemeId: it.schemeId,
+            status: 'Complete',
+            notes: 'Already applied prior to enrollment',
+            benefitReceivedDate: DateTime.now().toIso8601String().split('T').first,
+          ),
+        ).then((_) {
+          StorageService.markCanonicalFollowupSynced(
+            it.beneficiaryCode.isNotEmpty ? it.beneficiaryCode : '${it.beneficiaryId}',
+            it.schemeCode,
+          );
+        }).catchError((_) {});
+      }
     }
   }
 

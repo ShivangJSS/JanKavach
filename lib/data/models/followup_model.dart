@@ -70,6 +70,34 @@ class FollowupDashboardData {
       },
     };
   }
+
+  FollowupDashboardData copyWith({
+    int? totalUsersRegistered,
+    int? totalApplied,
+    int? pending,
+    int? complete,
+    int? notAppliedYet,
+    int? applicationPending,
+    int? documentIssue,
+    int? verificationPending,
+    int? overdue,
+    int? today,
+    int? upcoming,
+  }) {
+    return FollowupDashboardData(
+      totalUsersRegistered: totalUsersRegistered ?? this.totalUsersRegistered,
+      totalApplied: totalApplied ?? this.totalApplied,
+      pending: pending ?? this.pending,
+      complete: complete ?? this.complete,
+      notAppliedYet: notAppliedYet ?? this.notAppliedYet,
+      applicationPending: applicationPending ?? this.applicationPending,
+      documentIssue: documentIssue ?? this.documentIssue,
+      verificationPending: verificationPending ?? this.verificationPending,
+      overdue: overdue ?? this.overdue,
+      today: today ?? this.today,
+      upcoming: upcoming ?? this.upcoming,
+    );
+  }
 }
 
 class FollowupRegisterItem {

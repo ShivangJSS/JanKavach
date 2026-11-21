@@ -20,6 +20,7 @@ import '../settings_screen/settings_screen.dart';
 import '../support_screen/support_screen.dart';
 import '../beneficiary_registration/beneficiary_registration_screen.dart';
 import '../followup/followup_hub_screen.dart';
+import '../widgets/app_bottom_navigation_bar.dart';
 import '../../data/models/followup_model.dart';
 import '../../data/repository/followup_repository.dart';
 import '../../core/localization/app_localizations.dart';
@@ -43,8 +44,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    AppNavigationController.activeTab.addListener(_onExternalTabChanged);
     _loadInitialCachedData();
     _loadDashboardData();
+  }
+
+  @override
+  void dispose() {
+    AppNavigationController.activeTab.removeListener(_onExternalTabChanged);
+    super.dispose();
+  }
+
+  void _onExternalTabChanged() {
+    final target = AppNavigationController.activeTab.value;
+    if (_selectedTab != target) {
+      _switchTab(target);
+    }
+  }
+
+  void _switchTab(int index) {
+    final previousTab = _selectedTab;
+    setState(() => _selectedTab = index);
+    if (index == 0 && previousTab != 0) {
+      _loadDashboardData();
+    } else if (previousTab != index) {
+      BeneficiaryLocalDao().getPendingRegistrationsCount().then((
+        pendingCount,
+      ) {
+        if (mounted) {
+          setState(() => _offlinePendingCount = pendingCount);
+        }
+      });
+    }
+    if (index == 1) {
+      _beneficiariesKey.currentState?.refreshBeneficiaries();
+    }
   }
 
   Future<void> _loadInitialCachedData() async {
@@ -247,6 +281,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
 
       if (followupMetrics != null) {
+        final unsyncedCount = await StorageService.getUnsyncedPendingExclusionCount();
+        if (unsyncedCount > 0) {
+          final adjustedPending = (followupMetrics.pending - unsyncedCount).clamp(0, double.infinity).toInt();
+          followupMetrics = followupMetrics.copyWith(pending: adjustedPending);
+        }
+
         final effectiveFollowups = followupMetrics.pending > 0
             ? followupMetrics.pending
             : (summary.followupsDone > 0
@@ -1163,99 +1203,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // --------------------------------------------------
 
   Widget _buildBottomNavigation() {
-    final labels = [
-      context.tr('dashboard.nav_home'),
-      context.tr('dashboard.nav_beneficiaries'),
-      context.tr('dashboard.nav_schemes'),
-      context.tr('dashboard.nav_support'),
-    ];
-
-    const icons = [
-      Icons.home_rounded,
-      Icons.people_outline_rounded,
-      Icons.account_balance_outlined,
-      Icons.support_agent_rounded,
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 62,
-          child: Row(
-            children: List.generate(labels.length, (index) {
-              final selected = _selectedTab == index;
-
-              return Expanded(
-                child: InkWell(
-                  onTap: () {
-                    final previousTab = _selectedTab;
-                    setState(() => _selectedTab = index);
-                    if (index == 0 && previousTab != 0) {
-                      _loadDashboardData();
-                    } else if (previousTab != index) {
-                      BeneficiaryLocalDao().getPendingRegistrationsCount().then((
-                        pendingCount,
-                      ) {
-                        if (mounted) {
-                          setState(() => _offlinePendingCount = pendingCount);
-                        }
-                      });
-                    }
-                    if (index == 1) {
-                      _beneficiariesKey.currentState?.refreshBeneficiaries();
-                    }
-                  },
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 17,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: selected ? green : Colors.transparent,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Icon(
-                          icons[index],
-                          size: 21,
-                          color: selected ? Colors.white : muted,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        labels[index],
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: selected ? green : muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-      ),
+    return AppBottomNavigationBar(
+      currentIndex: _selectedTab,
+      onTabSelected: (index) {
+        _switchTab(index);
+        AppNavigationController.activeTab.value = index;
+      },
     );
   }
 

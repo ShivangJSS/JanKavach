@@ -7,6 +7,7 @@ import 'package:kavach/core/localization/localized_value_helper.dart';
 import 'package:kavach/data/models/%20beneficiary_model.dart';
 import 'package:kavach/data/models/followup_model.dart';
 import 'package:kavach/data/repository/followup_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kavach/views/beneficiary_detail_screen/beneficiary_detail_screen.dart';
 import 'package:kavach/views/followup/followup_hub_screen.dart';
 
@@ -104,6 +105,10 @@ Map<String, dynamic> _sampleDetails() {
 
 void main() {
   group('LocalizedValueHelper & BeneficiaryDetailScreen localization', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
     void useTallPhoneViewport(WidgetTester tester) {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;

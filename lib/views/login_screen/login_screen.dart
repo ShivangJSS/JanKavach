@@ -757,31 +757,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        const Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: 'Powered by ',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF5C6C65),
-                ),
-              ),
-              TextSpan(
-                text: 'Indev Consultancy',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: bankMaroon,
-                  letterSpacing: 0.15,
-                ),
-              ),
-            ],
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 3),
         Text(
           context.tr('auth.version_label'),
           textAlign: TextAlign.center,

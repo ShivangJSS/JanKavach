@@ -11,6 +11,7 @@ import '../../data/services/storage_service.dart';
 import '../profile_screen/profile_screen.dart';
 import '../welcome_screen/welcome_screen.dart';
 import '../widgets/language_selector_sheet.dart';
+import '../widgets/app_bottom_navigation_bar.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -452,6 +453,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
+        bottomNavigationBar: const AppBottomNavigationBar(currentIndex: 0),
       ),
     );
   }

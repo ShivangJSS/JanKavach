@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models/scheme_model.dart';
 import '../../data/repository/scheme_repository.dart';
+import '../widgets/app_bottom_navigation_bar.dart';
 
 class SchemeDetailScreen extends StatefulWidget {
   final SchemeModel scheme;
@@ -789,6 +790,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: const AppBottomNavigationBar(currentIndex: 2),
     );
   }
 }

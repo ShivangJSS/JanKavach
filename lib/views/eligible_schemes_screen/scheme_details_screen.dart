@@ -6,6 +6,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/localization/localized_value_helper.dart';
 import '../../data/models/eligible_scheme_model.dart';
 import '../../data/services/whatsapp_share_service.dart';
+import '../widgets/app_bottom_navigation_bar.dart';
 
 class SchemeDetailsScreen extends StatelessWidget {
   final EligibleSchemeModel scheme;
@@ -444,6 +445,7 @@ class SchemeDetailsScreen extends StatelessWidget {
           const SizedBox(height: 28),
         ],
       ),
+      bottomNavigationBar: const AppBottomNavigationBar(currentIndex: 2),
     );
   }
 

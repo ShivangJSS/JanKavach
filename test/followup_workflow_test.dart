@@ -9,6 +9,7 @@ import 'package:kavach/data/repository/followup_repository.dart';
 import 'package:kavach/views/followup/beneficiary_followup_screen.dart';
 import 'package:kavach/views/followup/followup_hub_screen.dart';
 import 'package:kavach/views/followup/record_followup_sheet.dart';
+import 'package:kavach/data/services/storage_service.dart';
 
 class _FakeFollowupRepository extends FollowupRepository {
   final List<RecordFollowupPayload> recordedPayloads = [];
@@ -280,6 +281,43 @@ void main() {
     );
 
     testWidgets(
+      'RecordFollowupSheet Complete status renders without overflow on 320px narrow width',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 640);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final fakeRepo = _FakeFollowupRepository();
+
+        await tester.pumpWidget(
+          _wrapTestApp(
+            Scaffold(
+              body: RecordFollowupSheet(
+                beneficiaryId: 1,
+                beneficiaryName: 'af',
+                schemeId: 10,
+                schemeName: 'Pradhan Mantri Suraksha Bima Yojana (PMSBY)',
+                existingFollowup: const SchemeFollowupDetail(
+                  id: 102,
+                  status: 'Applied',
+                  submissionDate: '2026-11-05',
+                ),
+                repository: fakeRepo,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
+        expect(find.textContaining('Benefit Received Date:'), findsOneWidget);
+        expect(find.text('Mark Scheme as Complete'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'BeneficiaryFollowupScreen disables Completed scheme button and blocks reopening follow-up',
       (tester) async {
         tester.view.physicalSize = const Size(800, 1800);
@@ -385,5 +423,106 @@ void main() {
         expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
       },
     );
+
+    test('Follow-up register excludes schemes marked as already applied in survey and adjusts pending count', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      const beneficiaryId = 222;
+      const beneficiaryCode = 'JK-UP-2026-000222';
+
+      // Initially user marks 2 schemes as already applied in the survey
+      await StorageService.saveAppliedSchemeCodes(
+        beneficiaryId,
+        {'JK-SCH-0016', 'JK-SCH-0010'},
+        beneficiaryCode,
+      );
+
+      final excludedKeys = await StorageService.getGlobalExcludedFollowupKeys();
+      expect(excludedKeys, contains('JK-UP-2026-000222_JK-SCH-0016'));
+      expect(excludedKeys, contains('JK-UP-2026-000222_JK-SCH-0010'));
+
+      final unsyncedCount = await StorageService.getUnsyncedPendingExclusionCount();
+      expect(unsyncedCount, 2);
+
+      // Create a mock register with 4 schemes for abcdef (like in the user's scenario)
+      final allRegisterItems = [
+        const FollowupRegisterItem(
+          followupId: 1,
+          beneficiaryId: beneficiaryId,
+          beneficiaryCode: beneficiaryCode,
+          beneficiaryName: 'abcdef',
+          schemeId: 8,
+          schemeCode: 'JK-SCH-0008',
+          schemeName: 'Women Helpline Number 181 scheme',
+          status: 'Pending',
+        ),
+        const FollowupRegisterItem(
+          followupId: 2,
+          beneficiaryId: beneficiaryId,
+          beneficiaryCode: beneficiaryCode,
+          beneficiaryName: 'abcdef',
+          schemeId: 16,
+          schemeCode: 'JK-SCH-0016',
+          schemeName: "NALSA's Compensation Scheme",
+          status: 'Pending',
+        ),
+        const FollowupRegisterItem(
+          followupId: 3,
+          beneficiaryId: beneficiaryId,
+          beneficiaryCode: beneficiaryCode,
+          beneficiaryName: 'abcdef',
+          schemeId: 10,
+          schemeCode: 'JK-SCH-0010',
+          schemeName: 'Ayushman Bharat',
+          status: 'Pending',
+        ),
+        const FollowupRegisterItem(
+          followupId: 4,
+          beneficiaryId: beneficiaryId,
+          beneficiaryCode: beneficiaryCode,
+          beneficiaryName: 'abcdef',
+          schemeId: 46,
+          schemeCode: 'JK-SCH-0046',
+          schemeName: 'Swadhar Greh',
+          status: 'Pending',
+        ),
+      ];
+
+      // Filtering with StorageService:
+      final filteredItems = allRegisterItems
+          .where((it) => !StorageService.isFollowupItemExcluded(it, excludedKeys))
+          .toList();
+
+      // Only the 2 schemes that the user did not mark as applied are kept for follow-up tracking!
+      expect(filteredItems.length, 2);
+      expect(filteredItems.map((e) => e.schemeCode), containsAll(['JK-SCH-0008', 'JK-SCH-0046']));
+      expect(filteredItems.map((e) => e.schemeCode), isNot(contains('JK-SCH-0016')));
+      expect(filteredItems.map((e) => e.schemeCode), isNot(contains('JK-SCH-0010')));
+
+      // Pending metric calculation:
+      // Server returned 86 (all 4 included). App deducts 2 unsynced applied schemes -> 84!
+      const serverPending = 86;
+      final adjustedPending = (serverPending - unsyncedCount).clamp(0, double.infinity).toInt();
+      expect(adjustedPending, 84);
+    });
+
+    test('StorageService auto-discovers pre-existing applied schemes preferences for global exclusion', () async {
+      // Simulating pre-existing storage from an earlier app session
+      SharedPreferences.setMockInitialValues({
+        'applied_schemes_code_JK-UP-2026-000222': ['JK-SCH-0016', 'JK-SCH-0010'],
+      });
+
+      final discoveredKeys = await StorageService.getGlobalExcludedFollowupKeys();
+      expect(discoveredKeys, contains('JK-UP-2026-000222_JK-SCH-0016'));
+      expect(discoveredKeys, contains('JK-UP-2026-000222_JK-SCH-0010'));
+
+      final unsyncedCount = await StorageService.getUnsyncedPendingExclusionCount();
+      expect(unsyncedCount, 2);
+
+      // Mark 1 as synced
+      await StorageService.markCanonicalFollowupSynced('JK-UP-2026-000222', 'JK-SCH-0016');
+      final remainingUnsynced = await StorageService.getUnsyncedPendingExclusionCount();
+      expect(remainingUnsynced, 1);
+    });
   });
 }

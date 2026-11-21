@@ -80,7 +80,7 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.byType(LoginScreen), findsOneWidget);
-        expect(findFooterText('Powered by Indev Consultancy'), findsOneWidget);
+        expect(findFooterText('Powered by'), findsNothing);
         expect(find.text('Version 1.0.0'), findsOneWidget);
 
         final scrollable = tester.state<ScrollableState>(
@@ -106,7 +106,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(LoginScreen), findsOneWidget);
-      expect(findFooterText('Powered by Indev Consultancy'), findsOneWidget);
+      expect(findFooterText('Powered by'), findsNothing);
       expect(find.text('संस्करण 1.0.0'), findsOneWidget);
 
       final scrollable = tester.state<ScrollableState>(

@@ -5,6 +5,7 @@ import '../../data/repository/followup_repository.dart';
 import '../../viewModels/followup_viewmodel.dart';
 import 'beneficiary_followup_screen.dart';
 import 'record_followup_sheet.dart';
+import '../widgets/app_bottom_navigation_bar.dart';
 
 class FollowupHubScreen extends StatefulWidget {
   final String? initialDueFilter;
@@ -191,6 +192,7 @@ class _FollowupHubScreenState extends State<FollowupHubScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: const AppBottomNavigationBar(currentIndex: 0),
     );
   }
 

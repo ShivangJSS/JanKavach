@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models/beneficiary_document_model.dart';
 import '../../data/services/storage_service.dart';
+import '../widgets/app_bottom_navigation_bar.dart';
 
 class DocumentPreviewScreen extends StatefulWidget {
   final BeneficiaryDocumentModel document;
@@ -382,6 +383,7 @@ class _DocumentPreviewScreenState extends State<DocumentPreviewScreen> {
                 ],
               ),
             ),
+      bottomNavigationBar: const AppBottomNavigationBar(currentIndex: 1),
     );
   }
 

@@ -468,6 +468,112 @@ class StorageService {
     return 'applied_survey_completed_id_$beneficiaryId';
   }
 
+  static const String _globalExcludedFollowupKeysKey = 'global_excluded_followup_keys';
+  static const String _unsyncedExcludedFollowupKeysKey = 'unsynced_excluded_followup_keys';
+  static const String _syncedExcludedFollowupKeysKey = 'synced_excluded_followup_keys';
+
+  static String _canonicalFollowupKey(dynamic benIdOrCode, String schemeCode) {
+    return '$benIdOrCode:$schemeCode';
+  }
+
+  static Future<Set<String>> getGlobalExcludedFollowupKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = (prefs.getStringList(_globalExcludedFollowupKeysKey) ?? []).toSet();
+
+    // Auto-discover existing applied schemes from per-beneficiary preferences
+    final allKeys = prefs.getKeys();
+    bool discovered = false;
+    for (final k in allKeys) {
+      if (k.startsWith('applied_schemes_code_')) {
+        final benCode = k.replaceFirst('applied_schemes_code_', '').trim();
+        final list = prefs.getStringList(k) ?? [];
+        for (final sc in list) {
+          if (keys.add('${benCode}_$sc')) discovered = true;
+        }
+      } else if (k.startsWith('applied_schemes_id_')) {
+        final benId = k.replaceFirst('applied_schemes_id_', '').trim();
+        final list = prefs.getStringList(k) ?? [];
+        for (final sc in list) {
+          if (keys.add('${benId}_$sc')) discovered = true;
+        }
+      }
+    }
+    if (discovered) {
+      await prefs.setStringList(_globalExcludedFollowupKeysKey, keys.toList());
+    }
+    return keys;
+  }
+
+  static bool isFollowupItemExcluded(
+    FollowupRegisterItem item,
+    Set<String> excludedKeys,
+  ) {
+    if (excludedKeys.isEmpty) return false;
+    if (excludedKeys.contains('${item.beneficiaryId}_${item.schemeCode}')) {
+      return true;
+    }
+    if (item.beneficiaryCode.isNotEmpty &&
+        excludedKeys.contains('${item.beneficiaryCode}_${item.schemeCode}')) {
+      return true;
+    }
+    return false;
+  }
+
+  static Future<int> getUnsyncedPendingExclusionCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawUnsynced = prefs.getStringList(_unsyncedExcludedFollowupKeysKey);
+    final synced = (prefs.getStringList(_syncedExcludedFollowupKeysKey) ?? []).toSet();
+
+    if (rawUnsynced != null) {
+      final unsynced = rawUnsynced.toSet().difference(synced);
+      return unsynced.length;
+    }
+
+    // Auto-discover legacy applied schemes once
+    final unsynced = <String>{};
+    final allKeys = prefs.getKeys();
+    for (final k in allKeys) {
+      if (k.startsWith('applied_schemes_code_')) {
+        final benCode = k.replaceFirst('applied_schemes_code_', '').trim();
+        final list = prefs.getStringList(k) ?? [];
+        for (final sc in list) {
+          final cKey = _canonicalFollowupKey(benCode, sc);
+          if (!synced.contains(cKey)) {
+            unsynced.add(cKey);
+          }
+        }
+      } else if (k.startsWith('applied_schemes_id_-')) {
+        final benId = k.replaceFirst('applied_schemes_id_', '').trim();
+        final list = prefs.getStringList(k) ?? [];
+        for (final sc in list) {
+          final cKey = _canonicalFollowupKey(benId, sc);
+          if (!synced.contains(cKey)) {
+            unsynced.add(cKey);
+          }
+        }
+      }
+    }
+
+    await prefs.setStringList(_unsyncedExcludedFollowupKeysKey, unsynced.toList());
+    return unsynced.length;
+  }
+
+  static Future<void> markCanonicalFollowupSynced(
+    dynamic beneficiaryIdOrCode,
+    String schemeCode,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final cKey = _canonicalFollowupKey(beneficiaryIdOrCode, schemeCode);
+    final synced = (prefs.getStringList(_syncedExcludedFollowupKeysKey) ?? []).toSet();
+    synced.add(cKey);
+    await prefs.setStringList(_syncedExcludedFollowupKeysKey, synced.toList());
+
+    final unsynced = (prefs.getStringList(_unsyncedExcludedFollowupKeysKey) ?? []).toSet();
+    unsynced.remove(cKey);
+    unsynced.removeWhere((k) => k == cKey || (k.endsWith(':$schemeCode') && (k.startsWith('$beneficiaryIdOrCode:') || beneficiaryIdOrCode.toString().contains(k.split(':').first))));
+    await prefs.setStringList(_unsyncedExcludedFollowupKeysKey, unsynced.toList());
+  }
+
   static Future<Set<String>> getAppliedSchemeCodes(
     int beneficiaryId, [
     String? beneficiaryCode,
@@ -488,6 +594,13 @@ class StorageService {
   ]) async {
     final prefs = await SharedPreferences.getInstance();
     final list = schemeCodes.toList();
+
+    // Read previous codes
+    final oldCodes = (prefs.getStringList(_appliedSchemesKey(beneficiaryId)) ?? []).toSet();
+    if (beneficiaryCode != null && beneficiaryCode.trim().isNotEmpty) {
+      oldCodes.addAll(prefs.getStringList(_appliedSchemesKey(beneficiaryId, beneficiaryCode)) ?? []);
+    }
+
     await prefs.setStringList(_appliedSchemesKey(beneficiaryId), list);
     await prefs.setBool(_appliedSurveyCompletedKey(beneficiaryId), true);
     if (beneficiaryCode != null && beneficiaryCode.trim().isNotEmpty) {
@@ -500,6 +613,44 @@ class StorageService {
         true,
       );
     }
+
+    // Update global excluded keys
+    final globalKeys = (prefs.getStringList(_globalExcludedFollowupKeysKey) ?? []).toSet();
+    final unsynced = (prefs.getStringList(_unsyncedExcludedFollowupKeysKey) ?? []).toSet();
+    final synced = (prefs.getStringList(_syncedExcludedFollowupKeysKey) ?? []).toSet();
+
+    for (final oldCode in oldCodes) {
+      globalKeys.remove('${beneficiaryId}_$oldCode');
+      if (beneficiaryCode != null && beneficiaryCode.trim().isNotEmpty) {
+        globalKeys.remove('${beneficiaryCode.trim()}_$oldCode');
+      }
+      final cKey = _canonicalFollowupKey(
+        beneficiaryCode != null && beneficiaryCode.trim().isNotEmpty
+            ? beneficiaryCode.trim()
+            : beneficiaryId,
+        oldCode,
+      );
+      unsynced.remove(cKey);
+    }
+
+    for (final newCode in schemeCodes) {
+      globalKeys.add('${beneficiaryId}_$newCode');
+      if (beneficiaryCode != null && beneficiaryCode.trim().isNotEmpty) {
+        globalKeys.add('${beneficiaryCode.trim()}_$newCode');
+      }
+      final cKey = _canonicalFollowupKey(
+        beneficiaryCode != null && beneficiaryCode.trim().isNotEmpty
+            ? beneficiaryCode.trim()
+            : beneficiaryId,
+        newCode,
+      );
+      if (!synced.contains(cKey)) {
+        unsynced.add(cKey);
+      }
+    }
+
+    await prefs.setStringList(_globalExcludedFollowupKeysKey, globalKeys.toList());
+    await prefs.setStringList(_unsyncedExcludedFollowupKeysKey, unsynced.toList());
   }
 
   static Future<bool> hasCompletedAppliedSurvey(
@@ -521,12 +672,40 @@ class StorageService {
     String? beneficiaryCode,
   ]) async {
     final prefs = await SharedPreferences.getInstance();
+    final oldCodes = (prefs.getStringList(_appliedSchemesKey(beneficiaryId)) ?? []).toSet();
+    if (beneficiaryCode != null && beneficiaryCode.trim().isNotEmpty) {
+      oldCodes.addAll(prefs.getStringList(_appliedSchemesKey(beneficiaryId, beneficiaryCode)) ?? []);
+    }
+
     await prefs.remove(_appliedSurveyCompletedKey(beneficiaryId));
     await prefs.remove(_appliedSchemesKey(beneficiaryId));
     if (beneficiaryCode != null && beneficiaryCode.trim().isNotEmpty) {
       await prefs.remove(_appliedSurveyCompletedKey(beneficiaryId, beneficiaryCode));
       await prefs.remove(_appliedSchemesKey(beneficiaryId, beneficiaryCode));
     }
+
+    final globalKeys = (prefs.getStringList(_globalExcludedFollowupKeysKey) ?? []).toSet();
+    final unsynced = (prefs.getStringList(_unsyncedExcludedFollowupKeysKey) ?? []).toSet();
+    final synced = (prefs.getStringList(_syncedExcludedFollowupKeysKey) ?? []).toSet();
+
+    for (final oldCode in oldCodes) {
+      globalKeys.remove('${beneficiaryId}_$oldCode');
+      if (beneficiaryCode != null && beneficiaryCode.trim().isNotEmpty) {
+        globalKeys.remove('${beneficiaryCode.trim()}_$oldCode');
+      }
+      final cKey = _canonicalFollowupKey(
+        beneficiaryCode != null && beneficiaryCode.trim().isNotEmpty
+            ? beneficiaryCode.trim()
+            : beneficiaryId,
+        oldCode,
+      );
+      unsynced.remove(cKey);
+      synced.remove(cKey);
+    }
+
+    await prefs.setStringList(_globalExcludedFollowupKeysKey, globalKeys.toList());
+    await prefs.setStringList(_unsyncedExcludedFollowupKeysKey, unsynced.toList());
+    await prefs.setStringList(_syncedExcludedFollowupKeysKey, synced.toList());
   }
 
   // ==========================

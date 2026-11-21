@@ -4,6 +4,7 @@ import '../../data/models/followup_model.dart';
 import '../../data/repository/followup_repository.dart';
 import '../../data/services/storage_service.dart';
 import 'record_followup_sheet.dart';
+import '../widgets/app_bottom_navigation_bar.dart';
 
 class BeneficiaryFollowupScreen extends StatefulWidget {
   final int beneficiaryId;
@@ -97,6 +98,7 @@ class _BeneficiaryFollowupScreenState extends State<BeneficiaryFollowupScreen> {
         elevation: 0,
       ),
       body: _buildBody(),
+      bottomNavigationBar: const AppBottomNavigationBar(currentIndex: 1),
     );
   }
 
