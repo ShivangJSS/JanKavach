@@ -225,7 +225,7 @@ class SchemeDetailsScreen extends StatelessWidget {
 
           // Available Documents
           _DocumentStatusCard(
-            title: context.tr('eligibility.available_documents'),
+            title: 'Available Documents',
             headerIcon: Icons.check_circle_outline,
             itemIcon: Icons.check_circle,
             cardBackground: const Color(0xFFF3FBF6),
@@ -233,14 +233,14 @@ class SchemeDetailsScreen extends StatelessWidget {
             accentColor: const Color(0xFF1F7A3F),
             badgeBackground: const Color(0xFFDFF4E6),
             documents: scheme.availableDocuments,
-            emptyMessage: context.tr('eligibility.no_available_docs'),
+            emptyMessage: 'No available documents found for this scheme.',
           ),
 
           const SizedBox(height: 14),
 
           // Missing Documents
           _DocumentStatusCard(
-            title: context.tr('eligibility.missing_documents'),
+            title: 'Missing Documents',
             headerIcon: Icons.warning_amber_rounded,
             itemIcon: Icons.error_outline,
             cardBackground: const Color(0xFFFFF6F6),
@@ -248,7 +248,7 @@ class SchemeDetailsScreen extends StatelessWidget {
             accentColor: const Color(0xFFC62828),
             badgeBackground: const Color(0xFFFDE4E4),
             documents: scheme.missingDocumentItems,
-            emptyMessage: context.tr('eligibility.no_missing_docs'),
+            emptyMessage: 'No missing documents found for this scheme.',
           ),
 
           // Application instructions

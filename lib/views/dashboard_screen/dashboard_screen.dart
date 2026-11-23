@@ -411,34 +411,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
       ),
-      child: Scaffold(
-        backgroundColor: background,
-        body: Column(
-          children: [
-            _buildHeader(),
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+        child: Scaffold(
+          backgroundColor: background,
+          body: Column(
+            children: [
+              _buildHeader(),
 
-            Expanded(
-              child: MediaQuery.removePadding(
-                context: context,
-                removeTop: true,
-                child: SafeArea(
-                  top: false,
-                  bottom: false,
-                  child: IndexedStack(
-                    index: _selectedTab,
-                    children: [
-                      _buildHomeContent(),
-                      BeneficiariesScreen(key: _beneficiariesKey),
-                      const SchemesScreen(),
-                      const SupportScreen(),
-                    ],
+              Expanded(
+                child: MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: SafeArea(
+                    top: false,
+                    bottom: false,
+                    child: IndexedStack(
+                      index: _selectedTab,
+                      children: [
+                        _buildHomeContent(),
+                        BeneficiariesScreen(key: _beneficiariesKey),
+                        const SchemesScreen(),
+                        const SupportScreen(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
+          bottomNavigationBar: _buildBottomNavigation(),
         ),
-        bottomNavigationBar: _buildBottomNavigation(),
       ),
     );
   }
@@ -524,10 +527,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 2. User Profile Card
             _buildProfileCard(),
 
             const SizedBox(height: 16),
 
+            // 3. Overview Section (4 ORIGINAL CARDS)
             _buildSectionHeading(
               context.tr('dashboard.overview'),
               trailing: _buildPeriodDropdown(),
@@ -545,7 +550,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ] else
               const SizedBox(height: 10),
 
-            // Overview statistics
+            // 4 Original Overview statistics cards in 2-column grid
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -613,8 +618,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
 
+            const SizedBox(height: 12),
+
+            // 4. New Total Amount Distributed Card (1 NEW CARD)
+            _buildTotalAmountDistributedCard(),
+
             const SizedBox(height: 20),
 
+            // 5. Quick Actions Section (3 ORIGINAL CARDS)
             _buildSectionHeading(context.tr('dashboard.quick_actions')),
 
             const SizedBox(height: 10),
@@ -682,6 +693,161 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
 
             const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --------------------------------------------------
+  // TOTAL AMOUNT DISTRIBUTED CARD
+  // --------------------------------------------------
+
+  Widget _buildTotalAmountDistributedCard() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF28D17C), Color(0xFF0B8A54)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.48),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF16B85C).withValues(alpha: 0.30),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.30),
+                        Colors.white.withValues(alpha: 0.05),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.45, 0.8],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -20,
+              right: -15,
+              child: IgnorePointer(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.15),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    height: 48,
+                    width: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(13),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.currency_rupee_rounded,
+                      color: Color(0xFF0A8754),
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total Amount Distributed',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withValues(alpha: 0.92),
+                            letterSpacing: 0.2,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '\u20B912,50,000',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 0.3,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.18),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Total financial benefits received by beneficiaries.',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            height: 1.25,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withValues(alpha: 0.88),
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -1266,6 +1432,7 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1341,6 +1508,7 @@ class _StatCard extends StatelessWidget {
                   const SizedBox(width: 9),
                   Expanded(
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

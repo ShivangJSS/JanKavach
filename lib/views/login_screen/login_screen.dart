@@ -495,7 +495,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            context.tr('auth.login_subtitle'),
+            'Enter your username and password to access the field portal.',
             style: const TextStyle(
               fontSize: 12,
               height: 1.35,
@@ -505,7 +505,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SizedBox(height: compact ? 12 : 14),
           _buildInputField(
             controller: _usernameController,
-            hint: context.tr('auth.mobile_number'),
+            hint: 'Username',
             icon: Icons.person_outline_rounded,
             textInputAction: TextInputAction.next,
           ),
