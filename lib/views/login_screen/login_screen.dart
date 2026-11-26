@@ -27,7 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
   static const Color darkGreen = Color(0xFF064B32);
   static const Color fieldColor = Color(0xFFF3F8F5);
   static const Color textGrey = Color(0xFF6B7785);
-  static const Color bankMaroon = Color(0xFF8C1D24);
 
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
@@ -495,7 +494,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Enter your username and password to access the field portal.',
+            context.tr('auth.login_subtitle'),
             style: const TextStyle(
               fontSize: 12,
               height: 1.35,
@@ -505,7 +504,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SizedBox(height: compact ? 12 : 14),
           _buildInputField(
             controller: _usernameController,
-            hint: 'Username',
+            hint: context.tr('auth.username'),
             icon: Icons.person_outline_rounded,
             textInputAction: TextInputAction.next,
           ),

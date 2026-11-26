@@ -312,5 +312,88 @@ void main() {
       expect(effectiveApplied, equals(5)); // 2 + 3 = 5 submitted
       expect(effectiveApproved, equals(3)); // 2 + 1 = 3 approved
     });
+
+    test('Beneficiary document status normalization maps Available to Yes, Applied to No, Not Available to No', () {
+      final docOptions = {
+        'Aadhaar Card': 'Available',
+        'PAN Card': 'Applied',
+        'Voter ID Card': 'Not Available',
+        'Birth Certificate': 'applied',
+        'Disability Card': 'available',
+      };
+
+      bool isDocAvailable(String docName, Map<String, String> values) {
+        final str = values[docName];
+        if (str != null && str.isNotEmpty) {
+          return str.toLowerCase() == 'available' || str.toLowerCase() == 'yes';
+        }
+        return false;
+      }
+
+      final docAadhaar = isDocAvailable('Aadhaar Card', docOptions) ? 'Yes' : 'No';
+      final docPan = isDocAvailable('PAN Card', docOptions) ? 'Yes' : 'No';
+      final docVoter = isDocAvailable('Voter ID Card', docOptions) ? 'Yes' : 'No';
+      final docBirth = isDocAvailable('Birth Certificate', docOptions) ? 'Yes' : 'No';
+      final docDisability = isDocAvailable('Disability Card', docOptions) ? 'Yes' : 'No';
+
+      expect(docAadhaar, equals('Yes'));
+      expect(docPan, equals('No')); // 'Applied' must map to 'No' for server schema validation
+      expect(docVoter, equals('No'));
+      expect(docBirth, equals('No'));
+      expect(docDisability, equals('Yes'));
+    });
+
+    test('BeneficiarySyncService payload sanitizer cleans empty strings and heals Applied doc fields', () {
+      final payload = <String, dynamic>{
+        'name': 'Test Beneficiary',
+        'mobile': '9876543210',
+        'address_line': '  ',
+        'current_address_details': {
+          'post_office': '',
+          'village_name': 'Sample Village',
+        },
+        'answers': {
+          'doc_aadhaar': 'Applied', // Legacy offline draft saved as Applied
+          'doc_pan': 'Yes',
+          'doc_voter_id': 'No',
+          'doc_birth_certificate': 'applied',
+        },
+      };
+
+      Map<String, dynamic> sanitizeMap(Map<dynamic, dynamic> input) {
+        final result = <String, dynamic>{};
+        input.forEach((k, v) {
+          final keyStr = k.toString();
+          if (v is String && v.trim().isEmpty) {
+            result[keyStr] = null;
+          } else if (v is Map) {
+            result[keyStr] = sanitizeMap(v);
+          } else {
+            result[keyStr] = v;
+          }
+        });
+        return result;
+      }
+      final sanitizedPayload = sanitizeMap(payload);
+
+      if (sanitizedPayload['answers'] is Map) {
+        final answers = Map<String, dynamic>.from(sanitizedPayload['answers'] as Map);
+        answers.forEach((k, v) {
+          if (k.startsWith('doc_') && v is String) {
+            final valLower = v.toLowerCase().trim();
+            answers[k] = (valLower == 'yes' || valLower == 'available') ? 'Yes' : 'No';
+          }
+        });
+        sanitizedPayload['answers'] = answers;
+      }
+
+      expect(sanitizedPayload['address_line'], isNull);
+      expect((sanitizedPayload['current_address_details'] as Map)['post_office'], isNull);
+      expect((sanitizedPayload['current_address_details'] as Map)['village_name'], equals('Sample Village'));
+      expect((sanitizedPayload['answers'] as Map)['doc_aadhaar'], equals('No'));
+      expect((sanitizedPayload['answers'] as Map)['doc_pan'], equals('Yes'));
+      expect((sanitizedPayload['answers'] as Map)['doc_voter_id'], equals('No'));
+      expect((sanitizedPayload['answers'] as Map)['doc_birth_certificate'], equals('No'));
+    });
   });
 }

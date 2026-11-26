@@ -19,6 +19,7 @@ class LocalizedValueHelper {
     'available': 'registration.available',
     'not available': 'registration.not_available',
     'not_available': 'registration.not_available',
+    'applied': 'registration.doc_applied',
     'father': 'registration.opt_father',
     'mother': 'registration.opt_mother',
     'spouse': 'registration.opt_spouse',

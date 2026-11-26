@@ -73,18 +73,40 @@ class BeneficiarySyncService {
         record['form_data'] as Map,
       );
 
-      final payload = Map<String, dynamic>.from(
+      final rawPayload = Map<String, dynamic>.from(
         (formData['payload'] is Map)
             ? formData['payload'] as Map
             : formData,
       );
 
-      // Clean empty strings to null for backend validation compatibility
-      payload.forEach((key, value) {
-        if (value is String && value.trim().isEmpty) {
-          payload[key] = null;
-        }
-      });
+      // Recursively clean empty strings to null for backend validation compatibility
+      Map<String, dynamic> sanitizeMap(Map<dynamic, dynamic> input) {
+        final result = <String, dynamic>{};
+        input.forEach((k, v) {
+          final keyStr = k.toString();
+          if (v is String && v.trim().isEmpty) {
+            result[keyStr] = null;
+          } else if (v is Map) {
+            result[keyStr] = sanitizeMap(v);
+          } else {
+            result[keyStr] = v;
+          }
+        });
+        return result;
+      }
+      final payload = sanitizeMap(rawPayload);
+
+      // Ensure all doc_* answers are strictly 'Yes' or 'No' (healing any offline drafts saved with 'Applied')
+      if (payload['answers'] is Map) {
+        final answers = Map<String, dynamic>.from(payload['answers'] as Map);
+        answers.forEach((k, v) {
+          if (k.startsWith('doc_') && v is String) {
+            final valLower = v.toLowerCase().trim();
+            answers[k] = (valLower == 'yes' || valLower == 'available') ? 'Yes' : 'No';
+          }
+        });
+        payload['answers'] = answers;
+      }
 
       if (payload['relation_type'] == 'Spouse') {
         payload['relation_type'] = 'Husband';

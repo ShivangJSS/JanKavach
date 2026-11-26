@@ -106,6 +106,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     int localAppliedCount = 0;
     int localApprovedCount = 0;
     int localFollowupsDue = 0;
+    int localUniqueApprovedBeneficiaries = 0;
 
     try {
       final db = await AppDatabase.instance.database;
@@ -138,9 +139,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // 3. Count applications and stages from cached beneficiaries for this user
       final stageRows = await db.rawQuery(
-        'SELECT data FROM beneficiary_cache WHERE user_id = ? OR user_id IS NULL',
+        'SELECT server_id, beneficiary_code, data FROM beneficiary_cache WHERE user_id = ? OR user_id IS NULL',
         currentUserId != null && currentUserId.isNotEmpty ? [currentUserId] : null,
       );
+      final Set<dynamic> uniqueApprovedBeneficiaryKeys = {};
       for (final row in stageRows) {
         try {
           final data = jsonDecode(row['data'] as String);
@@ -202,9 +204,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             }
 
             localApprovedCount += approvedOnBeneficiary;
+
+            // Unique beneficiary with at least one approved/received scheme
+            if (approvedOnBeneficiary > 0) {
+              final key = row['server_id'] ?? data['id'] ?? row['beneficiary_code'] ?? data['beneficiary_code'];
+              if (key != null) {
+                uniqueApprovedBeneficiaryKeys.add(key);
+              }
+            }
           }
         } catch (_) {}
       }
+      localUniqueApprovedBeneficiaries = uniqueApprovedBeneficiaryKeys.length;
 
       if (followupCached != null) {
         localFollowupsDue = followupCached.pending > 0
@@ -224,20 +235,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final cachedSummaryApproved = cached?.applicationsApproved ?? 0;
     final followupApproved = followupCached?.complete ?? 0;
-    var effectiveApproved = [cachedSummaryApproved, followupApproved, localApprovedCount]
+    final effectiveApproved = [cachedSummaryApproved, followupApproved, localApprovedCount]
         .reduce((a, b) => a > b ? a : b);
-
-    // Guardrail: Approved applications cannot exceed submitted applications
-    if (effectiveApplied == 0) {
-      effectiveApproved = 0;
-    } else if (effectiveApproved > effectiveApplied) {
-      effectiveApproved = effectiveApplied;
-    }
 
     final cachedDue = cached?.followupsDone ?? 0;
     final effectiveDue = localFollowupsDue > 0
         ? localFollowupsDue
         : cachedDue;
+
+    final int cachedUnique = cached?.beneficiariesWithApproved ?? 0;
+    final int effectiveUnique = [cachedUnique, localUniqueApprovedBeneficiaries]
+        .reduce((a, b) => a > b ? a : b);
 
     return DashboardSummary(
       beneficiariesRegistered: totalRegisteredCount > 0
@@ -246,6 +254,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       applicationsSubmitted: effectiveApplied,
       applicationsApproved: effectiveApproved,
       followupsDone: effectiveDue,
+      beneficiariesWithApproved: effectiveUnique,
     );
   }
 
@@ -312,6 +321,72 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         await StorageService.saveFollowupDashboard(followupMetrics);
       }
+
+      // Calculate unique beneficiaries who have received scheme benefits
+      final Set<dynamic> uniqueBeneficiariesSet = {};
+      try {
+        final completedFollowupRegister = await FollowupRepository().getRegister(
+          status: 'Complete',
+          perPage: 100,
+        );
+        for (final item in completedFollowupRegister.items) {
+          if (item.beneficiaryId > 0) {
+            uniqueBeneficiariesSet.add(item.beneficiaryId);
+          } else if (item.beneficiaryCode.isNotEmpty) {
+            uniqueBeneficiariesSet.add(item.beneficiaryCode);
+          }
+        }
+      } catch (ce) {
+        debugPrint('Completed followups unique check: $ce');
+      }
+
+      // Also incorporate local database unique beneficiaries who have approved schemes
+      try {
+        final db = await AppDatabase.instance.database;
+        final currentUserId = await StorageService.getCurrentUserId();
+        final localRows = await db.rawQuery(
+          'SELECT server_id, beneficiary_code, data FROM beneficiary_cache WHERE user_id = ? OR user_id IS NULL',
+          currentUserId != null && currentUserId.isNotEmpty ? [currentUserId] : null,
+        );
+        for (final row in localRows) {
+          try {
+            final d = jsonDecode(row['data'] as String);
+            if (d is Map) {
+              int approved = (d['approved_applications_count'] as num?)?.toInt() ??
+                  (d['applications_approved'] as num?)?.toInt() ??
+                  (d['approved_schemes_count'] as num?)?.toInt() ??
+                  (d['approved_count'] as num?)?.toInt() ?? 0;
+              if (approved > 0) {
+                final k = row['server_id'] ?? d['id'] ?? row['beneficiary_code'] ?? d['beneficiary_code'];
+                if (k != null) uniqueBeneficiariesSet.add(k);
+              } else if (d['applications'] is List) {
+                for (final app in d['applications'] as List) {
+                  if (app is Map) {
+                    final appStatus = (app['status'] ?? app['application_status'] ?? '').toString().toLowerCase();
+                    if (appStatus.contains('approv') || appStatus.contains('sanction') || appStatus == 'complete') {
+                      final k = row['server_id'] ?? d['id'] ?? row['beneficiary_code'] ?? d['beneficiary_code'];
+                      if (k != null) uniqueBeneficiariesSet.add(k);
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      var effectiveUniqueBeneficiaries = uniqueBeneficiariesSet.length;
+      if (summary.beneficiariesWithApproved > effectiveUniqueBeneficiaries) {
+        effectiveUniqueBeneficiaries = summary.beneficiariesWithApproved;
+      }
+      if (_summary.beneficiariesWithApproved > effectiveUniqueBeneficiaries) {
+        effectiveUniqueBeneficiaries = _summary.beneficiariesWithApproved;
+      }
+
+      summary = summary.copyWith(
+        beneficiariesWithApproved: effectiveUniqueBeneficiaries,
+      );
 
       final pendingCount =
           await BeneficiaryLocalDao().getPendingRegistrationsCount();
@@ -530,6 +605,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // 2. User Profile Card
             _buildProfileCard(),
 
+            const SizedBox(height: 12),
+
+            _buildBeneficiariesWithBenefitsCard(),
+
             const SizedBox(height: 16),
 
             // 3. Overview Section (4 ORIGINAL CARDS)
@@ -584,14 +663,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   labelColor: Colors.white.withValues(alpha: 0.94),
                 ),
                 _StatCard(
-                  icon: Icons.check_circle_rounded,
-                  iconColor: const Color(0xFF0B62D6),
+                  icon: Icons.verified_rounded,
+                  iconColor: const Color(0xFF06846C),
                   iconBackground: Colors.white,
-                  gradientColors: const [Color(0xFF33A3FF), Color(0xFF0B62D6)],
-                  glowColor: const Color(0xFF1D8BFF),
+                  gradientColors: const [Color(0xFF14CFA8), Color(0xFF06846C)],
+                  glowColor: const Color(0xFF0D9488),
                   borderColor: Colors.white.withValues(alpha: 0.48),
                   value: _summary.applicationsApproved.toString(),
-                  label: context.tr('dashboard.applications_approved'),
+                  label: context.tr('dashboard.benefit_completed'),
                   valueColor: Colors.white,
                   labelColor: Colors.white.withValues(alpha: 0.94),
                 ),
@@ -606,14 +685,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   label: context.tr('dashboard.followups'),
                   valueColor: Colors.white,
                   labelColor: Colors.white.withValues(alpha: 0.94),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FollowupHubScreen(),
-                      ),
-                    ).then((_) => _loadDashboardData());
-                  },
                 ),
               ],
             ),
@@ -977,6 +1048,122 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Color(0xFF0A7D43),
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBeneficiariesWithBenefitsCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFE8FBF2),
+            Color(0xFFF7FCF9),
+            Color(0xFFE0F7EB),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF86E2AF), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B8A54).withValues(alpha: 0.10),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 46,
+            width: 46,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF14CFA8), Color(0xFF06846C)],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.32),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.verified_user_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  context.tr('dashboard.beneficiaries_with_benefits'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF07472A),
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  context.tr('dashboard.beneficiaries_with_benefits_sub'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF4A6858),
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF14CFA8), Color(0xFF06846C)],
+              ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.28),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              _summary.beneficiariesWithApproved.toString(),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
               ),
             ),
           ),
@@ -1413,7 +1600,6 @@ class _StatCard extends StatelessWidget {
   final String label;
   final Color valueColor;
   final Color labelColor;
-  final VoidCallback? onTap;
 
   const _StatCard({
     required this.icon,
@@ -1426,13 +1612,11 @@ class _StatCard extends StatelessWidget {
     required this.label,
     this.valueColor = Colors.white,
     this.labelColor = Colors.white,
-    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final card = Container(
-      width: double.infinity,
+    return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1558,18 +1742,5 @@ class _StatCard extends StatelessWidget {
         ),
       ),
     );
-
-    if (onTap != null) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: card,
-        ),
-      );
-    }
-
-    return card;
   }
 }

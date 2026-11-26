@@ -2018,52 +2018,176 @@ class _BeneficiaryRegistrationScreenState
     }
   }
 
-  Widget _documentCheckbox(String field) {
-    final isChecked = _switches[field] ?? (_values[field] == 'Available');
+  Widget _documentDropdown(String field) {
+    const options = ['Available', 'Not Available', 'Applied'];
+    final rawVal = _values[field];
+    String currentVal;
+    if (rawVal != null && rawVal.isNotEmpty) {
+      currentVal = rawVal;
+    } else if (field == 'Aadhaar Card' &&
+        _value('Aadhaar Number').replaceAll(RegExp(r'\D'), '').length == 12) {
+      currentVal = 'Available';
+    } else {
+      currentVal = _switches[field] == true ? 'Available' : 'Not Available';
+    }
+
+    String effectiveValue = 'Not Available';
+    if (currentVal.toLowerCase() == 'available' || currentVal.toLowerCase() == 'yes') {
+      effectiveValue = 'Available';
+    } else if (currentVal.toLowerCase() == 'applied') {
+      effectiveValue = 'Applied';
+    } else {
+      effectiveValue = 'Not Available';
+    }
+
+    Color cardBorder;
+    Color cardBg;
+    IconData statusIcon;
+    Color statusColor;
+
+    switch (effectiveValue) {
+      case 'Available':
+        cardBorder = green;
+        cardBg = const Color(0xFFF0FDF4);
+        statusIcon = Icons.check_circle_rounded;
+        statusColor = green;
+        break;
+      case 'Applied':
+        cardBorder = const Color(0xFF3B82F6);
+        cardBg = const Color(0xFFEFF6FF);
+        statusIcon = Icons.pending_actions_rounded;
+        statusColor = const Color(0xFF2563EB);
+        break;
+      case 'Not Available':
+      default:
+        cardBorder = const Color(0xFFDCE6E0);
+        cardBg = Colors.white;
+        statusIcon = Icons.cancel_outlined;
+        statusColor = const Color(0xFF94A3B8);
+        break;
+    }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isChecked ? const Color(0xFFF0FDF4) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isChecked ? green : const Color(0xFFDCE6E0),
-          width: isChecked ? 1.2 : 1.0,
+          color: cardBorder,
+          width: effectiveValue == 'Not Available' ? 1.0 : 1.2,
         ),
       ),
-      child: CheckboxListTile(
-        value: isChecked,
-        onChanged: (bool? checked) {
-          setState(() {
-            final val = checked == true;
-            _switches[field] = val;
-            _values[field] = val ? 'Available' : 'Not available';
-          });
-          _scheduleDraftSave();
-        },
-        activeColor: green,
-        checkColor: Colors.white,
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-        controlAffinity: ListTileControlAffinity.leading,
-        title: Text(
-          _translateDocField(context, field),
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isChecked ? FontWeight.w600 : FontWeight.w400,
-            color: isChecked ? darkGreen : const Color(0xFF1E293B),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.description_outlined, size: 18, color: statusColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _translateDocField(context, field),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: effectiveValue == 'Not Available' ? FontWeight.w500 : FontWeight.w600,
+                    color: effectiveValue == 'Not Available' ? const Color(0xFF1E293B) : darkGreen,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(statusIcon, size: 13, color: statusColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      _translateOption(context, effectiveValue),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: statusColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ),
-        subtitle: Text(
-          isChecked
-              ? context.tr('registration.available')
-              : context.tr('registration.not_available'),
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isChecked ? FontWeight.w600 : FontWeight.normal,
-            color: isChecked ? green : const Color(0xFF8C9B93),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: effectiveValue,
+            isExpanded: true,
+            isDense: true,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFDCE6E0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: effectiveValue == 'Not Available'
+                      ? const Color(0xFFDCE6E0)
+                      : cardBorder.withValues(alpha: 0.6),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: green, width: 1.5),
+              ),
+            ),
+            items: options.map((option) {
+              Color optColor;
+              IconData optIcon;
+              if (option == 'Available') {
+                optColor = green;
+                optIcon = Icons.check_circle_rounded;
+              } else if (option == 'Applied') {
+                optColor = const Color(0xFF2563EB);
+                optIcon = Icons.pending_actions_rounded;
+              } else {
+                optColor = const Color(0xFF64748B);
+                optIcon = Icons.cancel_outlined;
+              }
+
+              return DropdownMenuItem<String>(
+                value: option,
+                child: Row(
+                  children: [
+                    Icon(optIcon, size: 16, color: optColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      _translateOption(context, option),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: optColor,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  _values[field] = val;
+                  _switches[field] = val == 'Available';
+                });
+                _scheduleDraftSave();
+              }
+            },
           ),
-        ),
+        ],
       ),
     );
   }
@@ -2129,7 +2253,7 @@ class _BeneficiaryRegistrationScreenState
                   ),
                 ),
               ),
-              ...documentFields.map((field) => _documentCheckbox(field)),
+              ...documentFields.map((field) => _documentDropdown(field)),
             ],
           ),
         ),
@@ -2310,7 +2434,25 @@ class _BeneficiaryRegistrationScreenState
         ),
         children: fields.map((field) {
           String value = _value(field);
-          if (_switches.containsKey(field)) {
+          const docFields = [
+            'Aadhaar Card',
+            'PAN Card',
+            'Birth Certificate',
+            'Voter ID Card',
+            'Death Certificate of Husband/Father/Primary Earner of Family',
+            'Income Certificate',
+            'Caste Certificate',
+            'Antyodaya Anna Yojana (AAY) ration card',
+            'Priority Household (PHH) ration card',
+            'Disability Card',
+          ];
+          if (docFields.contains(field)) {
+            final rawVal = _values[field];
+            final currentDoc = (rawVal != null && rawVal.isNotEmpty)
+                ? rawVal
+                : (_switches[field] == true ? 'Available' : 'Not Available');
+            value = _translateOption(context, currentDoc);
+          } else if (_switches.containsKey(field)) {
             final isYesNoQuestion = field.endsWith('?') ||
                 field.toLowerCase().startsWith('is ') ||
                 field.toLowerCase().startsWith('do ');
@@ -2801,14 +2943,15 @@ class _BeneficiaryRegistrationScreenState
     final bool aadhaarLinked = _switches['Is Phone Number Linked with Aadhaar Card?'] ?? false;
 
     bool isDocAvailable(String docName) {
-      if (_switches.containsKey(docName)) {
-        return _switches[docName] == true;
+      final str = _values[docName] ?? cleanString(docName);
+      if (str != null && str.isNotEmpty) {
+        return str.toLowerCase() == 'available' || str.toLowerCase() == 'yes';
       }
-      final str = cleanString(docName);
-      return str == 'Available' || str == 'Yes';
+      return _switches[docName] == true;
     }
 
-    final docAadhaar = isDocAvailable('Aadhaar Card') ? 'Yes' : 'No';
+    final aadhaarClean = cleanDigits('Aadhaar Number');
+    final docAadhaar = (isDocAvailable('Aadhaar Card') || (aadhaarClean != null && aadhaarClean.length == 12)) ? 'Yes' : 'No';
     final docPan = isDocAvailable('PAN Card') ? 'Yes' : 'No';
     final docBirth = isDocAvailable('Birth Certificate') ? 'Yes' : 'No';
     final docVoter = isDocAvailable('Voter ID Card') ? 'Yes' : 'No';
@@ -2818,7 +2961,6 @@ class _BeneficiaryRegistrationScreenState
     final docAay = isDocAvailable('Antyodaya Anna Yojana (AAY) ration card') ? 'Yes' : 'No';
     final docPhh = isDocAvailable('Priority Household (PHH) ration card') ? 'Yes' : 'No';
     final docDisability = isDocAvailable('Disability Card') ? 'Yes' : 'No';
-    final aadhaarClean = cleanDigits('Aadhaar Number');
     final hasAadhaar = (aadhaarClean != null && aadhaarClean.length == 12) || docAadhaar == 'Yes' ? 1 : 0;
 
     final answers = <String, dynamic>{
@@ -3026,6 +3168,7 @@ class _BeneficiaryRegistrationScreenState
 
       final savedRecord = await _localDao.getRecord(_localDraftId!);
       final isSynced = savedRecord?['record_state'] == 'synced';
+      final syncError = savedRecord?['sync_error']?.toString();
 
       if (!mounted) return;
 
@@ -3046,7 +3189,9 @@ class _BeneficiaryRegistrationScreenState
           content: Text(
             isSynced
                 ? context.tr('registration.submit_success_msg')
-                : context.tr('registration.submit_offline_msg'),
+                : (syncError != null && syncError.isNotEmpty
+                    ? '${context.tr('registration.submit_offline_msg')}\n\nSync Note: $syncError'
+                    : context.tr('registration.submit_offline_msg')),
           ),
           actions: [
             TextButton(

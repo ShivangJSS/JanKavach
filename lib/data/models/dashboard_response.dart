@@ -6,12 +6,14 @@ class DashboardSummary {
   final int applicationsSubmitted;
   final int applicationsApproved;
   final int followupsDone;
+  final int beneficiariesWithApproved;
 
   const DashboardSummary({
     this.beneficiariesRegistered = 0,
     this.applicationsSubmitted = 0,
     this.applicationsApproved = 0,
     this.followupsDone = 0,
+    this.beneficiariesWithApproved = 0,
   });
 
   factory DashboardSummary.fromJson(Map<String, dynamic> json) {
@@ -56,6 +58,14 @@ class DashboardSummary {
         'pending',
         'due_followups',
       ]),
+      beneficiariesWithApproved: readCount([
+        'beneficiaries_with_approved',
+        'beneficiaries_with_benefits',
+        'approved_beneficiaries',
+        'unique_beneficiaries_approved',
+        'beneficiaries_approved',
+        'beneficiaries_benefit_received',
+      ]),
     );
   }
 
@@ -65,6 +75,7 @@ class DashboardSummary {
       'applications_submitted': applicationsSubmitted,
       'applications_approved': applicationsApproved,
       'followups_done': followupsDone,
+      'beneficiaries_with_approved': beneficiariesWithApproved,
     };
   }
 
@@ -73,6 +84,7 @@ class DashboardSummary {
     int? applicationsSubmitted,
     int? applicationsApproved,
     int? followupsDone,
+    int? beneficiariesWithApproved,
   }) {
     return DashboardSummary(
       beneficiariesRegistered:
@@ -82,6 +94,8 @@ class DashboardSummary {
       applicationsApproved:
           applicationsApproved ?? this.applicationsApproved,
       followupsDone: followupsDone ?? this.followupsDone,
+      beneficiariesWithApproved:
+          beneficiariesWithApproved ?? this.beneficiariesWithApproved,
     );
   }
 }
