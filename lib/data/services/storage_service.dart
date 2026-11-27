@@ -430,6 +430,73 @@ class StorageService {
   }
 
   // ==========================
+  // Coordinator-Specific Follow-up Amounts
+  // ==========================
+  static const String coordinatorFollowupAmountsKey = 'coordinator_followup_amounts';
+
+  static Future<void> saveCoordinatorFollowupAmount({
+    required String coordinatorId,
+    required int beneficiaryId,
+    required int schemeId,
+    required num amount,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${coordinatorFollowupAmountsKey}_$coordinatorId';
+    final existingJson = prefs.getString(key);
+    Map<String, dynamic> records = {};
+    if (existingJson != null && existingJson.isNotEmpty) {
+      try {
+        records = Map<String, dynamic>.from(jsonDecode(existingJson) as Map);
+      } catch (_) {}
+    }
+    // Key by beneficiaryId_schemeId to ensure idempotent updates rather than duplicated additions
+    records['${beneficiaryId}_$schemeId'] = amount;
+    await prefs.setString(key, jsonEncode(records));
+  }
+
+  static Future<num> getCoordinatorTotalAmountDistributed(String coordinatorId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${coordinatorFollowupAmountsKey}_$coordinatorId';
+    final existingJson = prefs.getString(key);
+    if (existingJson == null || existingJson.isEmpty) return 0;
+    try {
+      final records = Map<String, dynamic>.from(jsonDecode(existingJson) as Map);
+      num total = 0;
+      for (final val in records.values) {
+        if (val is num) {
+          total += val;
+        } else if (val != null) {
+          total += num.tryParse(val.toString()) ?? 0;
+        }
+      }
+      return total;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  static Future<Map<String, num>> getCoordinatorFollowupAmounts(String coordinatorId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${coordinatorFollowupAmountsKey}_$coordinatorId';
+    final existingJson = prefs.getString(key);
+    if (existingJson == null || existingJson.isEmpty) return {};
+    try {
+      final records = Map<String, dynamic>.from(jsonDecode(existingJson) as Map);
+      final Map<String, num> result = {};
+      records.forEach((k, v) {
+        if (v is num) {
+          result[k] = v;
+        } else if (v != null) {
+          result[k] = num.tryParse(v.toString()) ?? 0;
+        }
+      });
+      return result;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  // ==========================
   // Master Data Download Cache
   // ==========================
   static const String masterDataSummaryKey = 'master_data_download_summary';

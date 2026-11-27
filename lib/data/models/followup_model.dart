@@ -124,8 +124,10 @@ class FollowupRegisterItem {
   final String? benefitReceivedDate;
   final String? nextFollowupDate;
   final String? notes;
+  final num? receivedAmount;
   final String? lastUpdatedAt;
   final String? lastUpdatedBy;
+  final String? coordinatorId;
 
   const FollowupRegisterItem({
     this.followupId,
@@ -149,13 +151,24 @@ class FollowupRegisterItem {
     this.benefitReceivedDate,
     this.nextFollowupDate,
     this.notes,
+    this.receivedAmount,
     this.lastUpdatedAt,
     this.lastUpdatedBy,
+    this.coordinatorId,
   });
 
   factory FollowupRegisterItem.fromJson(Map<String, dynamic> json) {
     final b = json['beneficiary'] as Map<String, dynamic>? ?? {};
     final s = json['scheme'] as Map<String, dynamic>? ?? {};
+
+    num? parseAmount(dynamic val) {
+      if (val is num) return val;
+      if (val != null) {
+        final cleaned = val.toString().replaceAll(',', '').replaceAll('₹', '').replaceAll('Rs.', '').trim();
+        return num.tryParse(cleaned);
+      }
+      return null;
+    }
 
     return FollowupRegisterItem(
       followupId: json['followup_id'] as int?,
@@ -181,8 +194,10 @@ class FollowupRegisterItem {
       benefitReceivedDate: json['benefit_received_date']?.toString(),
       nextFollowupDate: json['next_followup_date']?.toString(),
       notes: json['notes']?.toString(),
+      receivedAmount: parseAmount(json['received_amount'] ?? json['amount_received'] ?? json['benefit_amount']),
       lastUpdatedAt: json['last_updated_at']?.toString(),
       lastUpdatedBy: json['last_updated_by']?.toString(),
+      coordinatorId: (json['coordinator_id'] ?? json['user_id'] ?? json['created_by'])?.toString(),
     );
   }
 }
@@ -302,8 +317,10 @@ class SchemeFollowupDetail {
   final String? benefitReceivedDate;
   final String? nextFollowupDate;
   final String? notes;
+  final num? receivedAmount;
   final String? lastUpdatedAt;
   final String? lastUpdatedBy;
+  final String? coordinatorId;
 
   const SchemeFollowupDetail({
     this.id,
@@ -317,8 +334,10 @@ class SchemeFollowupDetail {
     this.benefitReceivedDate,
     this.nextFollowupDate,
     this.notes,
+    this.receivedAmount,
     this.lastUpdatedAt,
     this.lastUpdatedBy,
+    this.coordinatorId,
   });
 
   factory SchemeFollowupDetail.fromJson(Map<String, dynamic> json) {
@@ -335,6 +354,15 @@ class SchemeFollowupDetail {
       docName = docIssue.toString();
     }
 
+    num? parseAmount(dynamic val) {
+      if (val is num) return val;
+      if (val != null) {
+        final cleaned = val.toString().replaceAll(',', '').replaceAll('₹', '').replaceAll('Rs.', '').trim();
+        return num.tryParse(cleaned);
+      }
+      return null;
+    }
+
     return SchemeFollowupDetail(
       id: (json['id'] ?? json['followup_id']) as int?,
       status: json['status']?.toString() ?? 'Pending',
@@ -347,8 +375,10 @@ class SchemeFollowupDetail {
       benefitReceivedDate: json['benefit_received_date']?.toString(),
       nextFollowupDate: json['next_followup_date']?.toString(),
       notes: json['notes']?.toString(),
+      receivedAmount: parseAmount(json['received_amount'] ?? json['amount_received'] ?? json['benefit_amount']),
       lastUpdatedAt: json['last_updated_at']?.toString(),
       lastUpdatedBy: (json['last_updated_by'] ?? json['updated_by_name'] ?? json['last_updated_by_name'])?.toString(),
+      coordinatorId: (json['coordinator_id'] ?? json['user_id'] ?? json['created_by'])?.toString(),
     );
   }
 }
@@ -460,6 +490,8 @@ class RecordFollowupPayload {
   final String? benefitReceivedDate;
   final String? nextFollowupDate;
   final String? notes;
+  final num? receivedAmount;
+  final String? coordinatorId;
 
   const RecordFollowupPayload({
     required this.beneficiaryId,
@@ -474,6 +506,8 @@ class RecordFollowupPayload {
     this.benefitReceivedDate,
     this.nextFollowupDate,
     this.notes,
+    this.receivedAmount,
+    this.coordinatorId,
   });
 
   Map<String, dynamic> toJson() {
@@ -503,6 +537,13 @@ class RecordFollowupPayload {
     }
     if (notes != null && notes!.isNotEmpty) {
       map['notes'] = notes;
+    }
+    if (receivedAmount != null) {
+      map['received_amount'] = receivedAmount;
+    }
+    if (coordinatorId != null && coordinatorId!.isNotEmpty) {
+      map['coordinator_id'] = coordinatorId;
+      map['user_id'] = coordinatorId;
     }
 
     return map;

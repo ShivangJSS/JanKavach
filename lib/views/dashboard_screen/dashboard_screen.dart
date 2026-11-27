@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../data/local/app_database.dart';
@@ -247,6 +248,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final int effectiveUnique = [cachedUnique, localUniqueApprovedBeneficiaries]
         .reduce((a, b) => a > b ? a : b);
 
+    final currentUserId = await StorageService.getCurrentUserId();
+    num localCoordAmt = 0;
+    if (currentUserId != null && currentUserId.isNotEmpty) {
+      localCoordAmt = await StorageService.getCoordinatorTotalAmountDistributed(currentUserId);
+    }
+
     return DashboardSummary(
       beneficiariesRegistered: totalRegisteredCount > 0
           ? totalRegisteredCount
@@ -255,6 +262,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       applicationsApproved: effectiveApproved,
       followupsDone: effectiveDue,
       beneficiariesWithApproved: effectiveUnique,
+      totalAmountDistributed: localCoordAmt > 0 ? localCoordAmt : (cached?.totalAmountDistributed ?? 0),
     );
   }
 
@@ -278,6 +286,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Map<String, dynamic>.from(data['summary'] as Map);
 
       var summary = DashboardSummary.fromJson(summaryJson);
+
+      if (summary.totalAmountDistributed == 0 && responseData['data'] is Map) {
+        final dMap = responseData['data'] as Map;
+        num parseAmt(dynamic val) {
+          if (val is num) return val;
+          if (val != null) {
+            final cleaned = val.toString().replaceAll(',', '').replaceAll('\u20B9', '').replaceAll('Rs.', '').trim();
+            return num.tryParse(cleaned) ?? 0;
+          }
+          return 0;
+        }
+        final topAmt = parseAmt(dMap['total_amount_distributed'] ?? dMap['amount_distributed'] ?? dMap['total_amount']);
+        if (topAmt > 0) {
+          summary = summary.copyWith(totalAmountDistributed: topAmt);
+        }
+      }
 
       // Fetch dynamic live metrics from Follow-up Module (/followup/dashboard)
       // to keep all 4 cards dynamically updated with live database counts!
@@ -322,8 +346,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         await StorageService.saveFollowupDashboard(followupMetrics);
       }
 
-      // Calculate unique beneficiaries who have received scheme benefits
+      // Calculate unique beneficiaries who have received scheme benefits and coordinator amounts
       final Set<dynamic> uniqueBeneficiariesSet = {};
+      num coordinatorApiAmount = 0;
+      final currentUserId = await StorageService.getCurrentUserId();
       try {
         final completedFollowupRegister = await FollowupRepository().getRegister(
           status: 'Complete',
@@ -335,9 +361,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           } else if (item.beneficiaryCode.isNotEmpty) {
             uniqueBeneficiariesSet.add(item.beneficiaryCode);
           }
+          if (item.receivedAmount != null && item.receivedAmount! > 0) {
+            if (item.coordinatorId == null || item.coordinatorId == currentUserId || currentUserId == null) {
+              coordinatorApiAmount += item.receivedAmount!;
+            }
+          }
         }
       } catch (ce) {
         debugPrint('Completed followups unique check: $ce');
+      }
+
+      num localCoordAmt = 0;
+      if (currentUserId != null && currentUserId.isNotEmpty) {
+        localCoordAmt = await StorageService.getCoordinatorTotalAmountDistributed(currentUserId);
+      }
+      final effectiveCoordAmount = localCoordAmt > coordinatorApiAmount ? localCoordAmt : coordinatorApiAmount;
+      if (effectiveCoordAmount > 0) {
+        summary = summary.copyWith(totalAmountDistributed: effectiveCoordAmount);
       }
 
       // Also incorporate local database unique beneficiaries who have approved schemes
@@ -605,10 +645,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // 2. User Profile Card
             _buildProfileCard(),
 
-            const SizedBox(height: 12),
-
-            _buildBeneficiariesWithBenefitsCard(),
-
             const SizedBox(height: 16),
 
             // 3. Overview Section (4 ORIGINAL CARDS)
@@ -670,7 +706,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   glowColor: const Color(0xFF0D9488),
                   borderColor: Colors.white.withValues(alpha: 0.48),
                   value: _summary.applicationsApproved.toString(),
-                  label: context.tr('dashboard.benefit_completed'),
+                  label: context.tr('dashboard.applications_approved'),
                   valueColor: Colors.white,
                   labelColor: Colors.white.withValues(alpha: 0.94),
                 ),
@@ -773,6 +809,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // --------------------------------------------------
   // TOTAL AMOUNT DISTRIBUTED CARD
   // --------------------------------------------------
+
+  String _formatIndianCurrency(num amount) {
+    if (amount == 0) return '\u20B90';
+    if (amount % 1 == 0) {
+      return NumberFormat.currency(
+        locale: 'en_IN',
+        symbol: '\u20B9',
+        decimalDigits: 0,
+      ).format(amount);
+    }
+    return NumberFormat.currency(
+      locale: 'en_IN',
+      symbol: '\u20B9',
+      decimalDigits: 2,
+    ).format(amount);
+  }
 
   Widget _buildTotalAmountDistributedCard() {
     return Container(
@@ -881,7 +933,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '\u20B912,50,000',
+                          _formatIndianCurrency(_summary.totalAmountDistributed),
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
@@ -1048,122 +1100,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Color(0xFF0A7D43),
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBeneficiariesWithBenefitsCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFE8FBF2),
-            Color(0xFFF7FCF9),
-            Color(0xFFE0F7EB),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF86E2AF), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0B8A54).withValues(alpha: 0.10),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            height: 46,
-            width: 46,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF14CFA8), Color(0xFF06846C)],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0D9488).withValues(alpha: 0.32),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.verified_user_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  context.tr('dashboard.beneficiaries_with_benefits'),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF07472A),
-                    height: 1.25,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  context.tr('dashboard.beneficiaries_with_benefits_sub'),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF4A6858),
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF14CFA8), Color(0xFF06846C)],
-              ),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0D9488).withValues(alpha: 0.28),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Text(
-              _summary.beneficiariesWithApproved.toString(),
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
               ),
             ),
           ),

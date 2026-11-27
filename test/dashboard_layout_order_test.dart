@@ -1,16 +1,41 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kavach/core/localization/app_localizations.dart';
 import 'package:kavach/views/dashboard_screen/dashboard_screen.dart';
+import 'package:kavach/views/widgets/app_bottom_navigation_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
+class _PreloadedLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
+  final AppLocalizations localizations;
+  const _PreloadedLocalizationsDelegate(this.localizations);
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<AppLocalizations> load(Locale locale) =>
+      SynchronousFuture<AppLocalizations>(localizations);
+
+  @override
+  bool shouldReload(_PreloadedLocalizationsDelegate old) => false;
+}
+
+late AppLocalizations _enLocalizations;
+
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    _enLocalizations = AppLocalizations(const Locale('en'));
+    await _enLocalizations.load();
+  });
 
   setUp(() {
+    AppNavigationController.activeTab.value = 0;
     SharedPreferences.setMockInitialValues({});
     databaseFactory = databaseFactorySqflitePlugin;
 
@@ -62,15 +87,16 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
+        locale: const Locale('en'),
         localizationsDelegates: [
-          AppLocalizations.delegate,
+          _PreloadedLocalizationsDelegate(_enLocalizations),
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: [Locale('en')],
-        home: DashboardScreen(),
+        supportedLocales: const [Locale('en')],
+        home: const DashboardScreen(),
       ),
     );
 
@@ -84,6 +110,9 @@ void main() {
     final totalAmountTitleFinder = find.text('Total Amount Distributed');
     final quickActionsHeadingFinder = find.text('Quick Actions');
 
+    // Verify Beneficiaries with Approved Benefits card was removed from Dashboard
+    expect(find.text('Beneficiaries with Approved Benefits'), findsNothing);
+    expect(find.text('Citizens who received at least one scheme benefit'), findsNothing);
     expect(overviewHeadingFinder, findsOneWidget);
     expect(totalAmountTitleFinder, findsOneWidget);
     expect(quickActionsHeadingFinder, findsOneWidget);
@@ -109,8 +138,8 @@ void main() {
     expect(find.text('Application\nApproved'), findsOneWidget);
     expect(find.text('This Month'), findsOneWidget);
 
-    // 3. Verify new Total Amount Distributed card details
-    expect(find.text('₹12,50,000'), findsOneWidget);
+    // 3. Verify new Total Amount Distributed card details (defaults to ₹0 when API returns zero/unloaded)
+    expect(find.text('₹0'), findsOneWidget);
     expect(
       find.text('Total financial benefits received by beneficiaries.'),
       findsOneWidget,

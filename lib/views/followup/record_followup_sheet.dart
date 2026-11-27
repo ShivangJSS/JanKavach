@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../data/models/followup_model.dart';
 import '../../data/repository/followup_repository.dart';
+import '../../data/services/storage_service.dart';
 
 class RecordFollowupSheet extends StatefulWidget {
   final int beneficiaryId;
@@ -82,6 +84,8 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
 
   // For 'Complete'
   DateTime? _benefitReceivedDate;
+  final TextEditingController _receivedAmountController =
+      TextEditingController(text: '0');
 
   // Common
   final TextEditingController _notesController = TextEditingController();
@@ -148,6 +152,13 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
           _benefitReceivedDate = DateTime.parse(existing.benefitReceivedDate!);
         } catch (_) {}
       }
+      if (existing.receivedAmount != null) {
+        final amt = existing.receivedAmount!;
+        _receivedAmountController.text =
+            (amt % 1 == 0) ? amt.toInt().toString() : amt.toString();
+      } else {
+        _receivedAmountController.text = '0';
+      }
     }
 
     // Always ensure non-null default dates for active statuses
@@ -203,6 +214,7 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
   void dispose() {
     _docNotesController.dispose();
     _notesController.dispose();
+    _receivedAmountController.dispose();
     super.dispose();
   }
 
@@ -256,11 +268,25 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
     }
     if (_selectedStatus == 'Complete') {
       _benefitReceivedDate ??= DateTime.now();
+      if (_benefitReceivedDate!.isAfter(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Benefit received date cannot be in the future.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isSubmitting = true);
 
     try {
+      final currentUserId = await StorageService.getCurrentUserId();
+      final parsedAmount = _selectedStatus == 'Complete'
+          ? (num.tryParse(_receivedAmountController.text.trim()) ?? 0)
+          : null;
+
       final payload = RecordFollowupPayload(
         beneficiaryId: widget.beneficiaryId,
         schemeId: widget.schemeId,
@@ -290,9 +316,20 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
         notes: _notesController.text.trim().isNotEmpty
             ? _notesController.text.trim()
             : null,
+        receivedAmount: parsedAmount,
+        coordinatorId: currentUserId,
       );
 
       await _repository.recordFollowup(payload);
+
+      if (_selectedStatus == 'Complete' && currentUserId != null && currentUserId.isNotEmpty) {
+        await StorageService.saveCoordinatorFollowupAmount(
+          coordinatorId: currentUserId,
+          beneficiaryId: widget.beneficiaryId,
+          schemeId: widget.schemeId,
+          amount: parsedAmount ?? 0,
+        );
+      }
 
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -523,6 +560,8 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
                   _buildPendingSection(),
                 ] else ...[
                   _buildCompleteSection(),
+                  const SizedBox(height: 16),
+                  _buildReceivedAmountField(),
                 ],
 
                 const SizedBox(height: 20),
@@ -981,14 +1020,16 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
           ),
           const SizedBox(height: 12),
           InkWell(
-            onTap: () {
-              _pickDate(
-                context: context,
-                initialDate: displayDate,
-                lastDate: DateTime.now(),
-                onPicked: (d) => _benefitReceivedDate = d,
-              );
-            },
+            onTap: _isExistingComplete
+                ? null
+                : () {
+                    _pickDate(
+                      context: context,
+                      initialDate: displayDate,
+                      lastDate: DateTime.now(),
+                      onPicked: (d) => setState(() => _benefitReceivedDate = d),
+                    );
+                  },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
@@ -1020,6 +1061,81 @@ class _RecordFollowupSheetState extends State<RecordFollowupSheet> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildReceivedAmountField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Received Amount (\u20B9)',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF26352E),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _receivedAmountController,
+          enabled: !_isExistingComplete,
+          readOnly: _isExistingComplete,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+          ],
+          decoration: InputDecoration(
+            hintText: '0',
+            prefixIcon: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: Icon(
+                Icons.currency_rupee_rounded,
+                color: green,
+                size: 20,
+              ),
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 44,
+              minHeight: 44,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF7FAF8),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFD9E2DC)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFD9E2DC)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: green, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Colors.red, width: 1.2),
+            ),
+            helperText: 'For non-monetary benefits, enter 0',
+            helperStyle: const TextStyle(fontSize: 11, color: Color(0xFF7A8B82)),
+          ),
+          validator: (value) {
+            final trimmed = value?.trim() ?? '';
+            if (trimmed.isEmpty) {
+              return 'Please enter received amount (or 0)';
+            }
+            final parsed = num.tryParse(trimmed);
+            if (parsed == null) {
+              return 'Please enter a valid numeric amount';
+            }
+            if (parsed < 0) {
+              return 'Received amount cannot be negative';
+            }
+            return null;
+          },
+        ),
+      ],
     );
   }
 }

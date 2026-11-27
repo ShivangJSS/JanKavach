@@ -75,8 +75,13 @@ class EligibleSchemesRepository {
         'status': 'both',
         'complete': true,
       };
-      if (bProfile['answers'] is Map && (bProfile['answers'] as Map).isNotEmpty) {
-        requestPayload['answers'] = Map<String, dynamic>.from(bProfile['answers'] as Map);
+      // Do not blindly send stale SQLite registration draft answers to overwrite server assessment answers
+      if (bProfile['answers'] is Map &&
+          (bProfile['answers'] as Map).isNotEmpty &&
+          bProfile['_from_local_draft'] != true) {
+        final answers = Map<String, dynamic>.from(bProfile['answers'] as Map);
+        _preserveAndNormalizeChildAnswers(effectiveId, answers);
+        requestPayload['answers'] = answers;
       }
 
       // 1. First attempt: POST /beneficiaries/$effectiveId/eligible-schemes
@@ -330,7 +335,46 @@ class EligibleSchemesRepository {
     final db = await _db;
     final absId = beneficiaryId.abs();
 
-    // 1. Try beneficiary_records in SQLite (supports local offline & synced)
+    // 1. For a positive server ID, prioritize server-fetched cache data (geography_cache & beneficiary_cache)
+    if (beneficiaryId > 0) {
+      // 1a. Try geography_cache for beneficiary_details_$beneficiaryId (from GET /beneficiaries/$id)
+      try {
+        final rows = await db.query(
+          'geography_cache',
+          where: 'cache_key = ?',
+          whereArgs: ['beneficiary_details_$beneficiaryId'],
+          limit: 1,
+        );
+        if (rows.isNotEmpty) {
+          final data = jsonDecode(rows.first['data'] as String);
+          if (data is Map) {
+            final bMap = Map<String, dynamic>.from(data);
+            _normalizeBeneficiaryData(bMap);
+            return bMap;
+          }
+        }
+      } catch (_) {}
+
+      // 1b. Try beneficiary_cache in SQLite
+      try {
+        final rows = await db.query(
+          'beneficiary_cache',
+          where: 'server_id = ?',
+          whereArgs: [beneficiaryId],
+          limit: 1,
+        );
+        if (rows.isNotEmpty) {
+          final data = jsonDecode(rows.first['data'] as String);
+          if (data is Map) {
+            final bMap = Map<String, dynamic>.from(data);
+            _normalizeBeneficiaryData(bMap);
+            return bMap;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Try beneficiary_records in SQLite (supports local offline & synced draft fallback)
     try {
       final rows = await db.query(
         'beneficiary_records',
@@ -351,6 +395,7 @@ class EligibleSchemesRepository {
             }
           } catch (_) {}
         }
+        bMap['_from_local_draft'] = true;
         if (bMap['answers'] is Map) {
           final answers = Map<String, dynamic>.from(bMap['answers'] as Map);
           answers.forEach((k, v) {
@@ -381,39 +426,65 @@ class EligibleSchemesRepository {
             bMap[col] = row[col];
           }
         }
+        _normalizeBeneficiaryData(bMap);
         return bMap;
       }
     } catch (_) {}
 
-    // 2. Try beneficiary_cache in SQLite
-    try {
-      final rows = await db.query(
-        'beneficiary_cache',
-        where: 'server_id = ?',
-        whereArgs: [beneficiaryId],
-        limit: 1,
-      );
-      if (rows.isNotEmpty) {
-        final data = jsonDecode(rows.first['data'] as String);
-        if (data is Map) return Map<String, dynamic>.from(data);
-      }
-    } catch (_) {}
-
-    // 3. Try geography_cache for beneficiary_details_$beneficiaryId
-    try {
-      final rows = await db.query(
-        'geography_cache',
-        where: 'cache_key = ?',
-        whereArgs: ['beneficiary_details_$beneficiaryId'],
-        limit: 1,
-      );
-      if (rows.isNotEmpty) {
-        final data = jsonDecode(rows.first['data'] as String);
-        if (data is Map) return Map<String, dynamic>.from(data);
-      }
-    } catch (_) {}
+    // 3. If offline negative ID not found in records, check cache
+    if (beneficiaryId < 0) {
+      try {
+        final rows = await db.query(
+          'geography_cache',
+          where: 'cache_key = ?',
+          whereArgs: ['beneficiary_details_$beneficiaryId'],
+          limit: 1,
+        );
+        if (rows.isNotEmpty) {
+          final data = jsonDecode(rows.first['data'] as String);
+          if (data is Map) {
+            final bMap = Map<String, dynamic>.from(data);
+            _normalizeBeneficiaryData(bMap);
+            return bMap;
+          }
+        }
+      } catch (_) {}
+    }
 
     return null;
+  }
+
+  void _normalizeBeneficiaryData(Map<String, dynamic> bMap) {
+    if (!bMap.containsKey('children_under_18') && bMap.containsKey('children_below_18')) {
+      bMap['children_under_18'] = bMap['children_below_18'];
+    }
+    if (!bMap.containsKey('children_in_school') && bMap.containsKey('children_enrolled_in_school')) {
+      bMap['children_in_school'] = bMap['children_enrolled_in_school'];
+    }
+    if (bMap['answers'] is Map) {
+      final answers = Map<String, dynamic>.from(bMap['answers'] as Map);
+      if (!answers.containsKey('children_under_18') && answers.containsKey('children_below_18')) {
+        answers['children_under_18'] = answers['children_below_18'];
+      }
+      if (!answers.containsKey('children_in_school') && answers.containsKey('children_enrolled_in_school')) {
+        answers['children_in_school'] = answers['children_enrolled_in_school'];
+      }
+      bMap['answers'] = answers;
+    }
+  }
+
+  void _preserveAndNormalizeChildAnswers(int beneficiaryId, Map<String, dynamic> answers) {
+    if (!answers.containsKey('children_under_18') && answers.containsKey('children_below_18')) {
+      answers['children_under_18'] = answers['children_below_18'];
+    }
+    if (!answers.containsKey('children_in_school') && answers.containsKey('children_enrolled_in_school')) {
+      answers['children_in_school'] = answers['children_enrolled_in_school'];
+    }
+    final gCount = int.tryParse('${answers['girl_child_count']}') ?? 0;
+    final bCount = int.tryParse('${answers['boy_child_count']}') ?? 0;
+    if (gCount > 0 || bCount > 0) {
+      answers['has_children'] = 'Yes';
+    }
   }
 
   /// Evaluates eligibility offline by matching the beneficiary's actual demographic,

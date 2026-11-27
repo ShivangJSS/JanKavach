@@ -105,6 +105,25 @@ class BeneficiarySyncService {
             answers[k] = (valLower == 'yes' || valLower == 'available') ? 'Yes' : 'No';
           }
         });
+
+        // Ensure canonical child keys are present and map legacy alias keys if needed
+        if (!answers.containsKey('children_under_18') && answers.containsKey('children_below_18')) {
+          answers['children_under_18'] = answers['children_below_18'];
+        }
+        if (!answers.containsKey('children_in_school') && answers.containsKey('children_enrolled_in_school')) {
+          answers['children_in_school'] = answers['children_enrolled_in_school'];
+        }
+        payload['children_under_18'] ??= answers['children_under_18'];
+        payload['children_in_school'] ??= answers['children_in_school'];
+
+        // Guard against inconsistent state: if child counts > 0, has_children must not be 'No'
+        final gCount = int.tryParse('${answers['girl_child_count']}') ?? 0;
+        final bCount = int.tryParse('${answers['boy_child_count']}') ?? 0;
+        if (gCount > 0 || bCount > 0) {
+          answers['has_children'] = 'Yes';
+          payload['has_children'] = 'Yes';
+        }
+
         payload['answers'] = answers;
       }
 

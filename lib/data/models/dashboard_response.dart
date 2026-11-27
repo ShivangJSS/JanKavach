@@ -7,6 +7,7 @@ class DashboardSummary {
   final int applicationsApproved;
   final int followupsDone;
   final int beneficiariesWithApproved;
+  final num totalAmountDistributed;
 
   const DashboardSummary({
     this.beneficiariesRegistered = 0,
@@ -14,6 +15,7 @@ class DashboardSummary {
     this.applicationsApproved = 0,
     this.followupsDone = 0,
     this.beneficiariesWithApproved = 0,
+    this.totalAmountDistributed = 0,
   });
 
   factory DashboardSummary.fromJson(Map<String, dynamic> json) {
@@ -24,6 +26,25 @@ class DashboardSummary {
         if (value is num) return value.toInt();
         if (value != null) {
           final parsed = int.tryParse(value.toString());
+          if (parsed != null) return parsed;
+        }
+      }
+      return 0;
+    }
+
+    num readAmount(List<String> keys) {
+      for (final key in keys) {
+        final value = json[key];
+        if (value is num) return value;
+        if (value != null) {
+          final cleaned = value
+              .toString()
+              .replaceAll(',', '')
+              .replaceAll('\u20B9', '')
+              .replaceAll('Rs.', '')
+              .replaceAll('Rs', '')
+              .trim();
+          final parsed = num.tryParse(cleaned);
           if (parsed != null) return parsed;
         }
       }
@@ -66,6 +87,19 @@ class DashboardSummary {
         'beneficiaries_approved',
         'beneficiaries_benefit_received',
       ]),
+      totalAmountDistributed: readAmount([
+        'total_amount_distributed',
+        'amount_distributed',
+        'total_amount',
+        'total_distributed_amount',
+        'total_benefit_amount',
+        'total_benefits_distributed',
+        'benefit_amount_distributed',
+        'disbursed_amount',
+        'total_disbursed_amount',
+        'total_disbursed',
+        'amount',
+      ]),
     );
   }
 
@@ -76,6 +110,7 @@ class DashboardSummary {
       'applications_approved': applicationsApproved,
       'followups_done': followupsDone,
       'beneficiaries_with_approved': beneficiariesWithApproved,
+      'total_amount_distributed': totalAmountDistributed,
     };
   }
 
@@ -85,6 +120,7 @@ class DashboardSummary {
     int? applicationsApproved,
     int? followupsDone,
     int? beneficiariesWithApproved,
+    num? totalAmountDistributed,
   }) {
     return DashboardSummary(
       beneficiariesRegistered:
@@ -96,6 +132,8 @@ class DashboardSummary {
       followupsDone: followupsDone ?? this.followupsDone,
       beneficiariesWithApproved:
           beneficiariesWithApproved ?? this.beneficiariesWithApproved,
+      totalAmountDistributed:
+          totalAmountDistributed ?? this.totalAmountDistributed,
     );
   }
 }

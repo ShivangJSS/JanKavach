@@ -254,8 +254,13 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Pre-selects Complete with Benefit Disbursement section
+        // Pre-selects Complete with Benefit Disbursement Confirmation card and Received Amount section
         expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
+        expect(find.text('Received Amount (₹)'), findsOneWidget);
+        final benefitConfirmationTop = tester.getTopLeft(find.text('Benefit Disbursement Confirmation')).dy;
+        final receivedAmountTop = tester.getTopLeft(find.text('Received Amount (₹)')).dy;
+        expect(benefitConfirmationTop, lessThan(receivedAmountTop),
+            reason: 'Benefit Disbursement Confirmation card must appear above Received Amount field');
         expect(find.text('Mark Scheme as Complete'), findsOneWidget);
 
         // Tapping Not Applied or Yes, Applied must NOT switch away from Complete
@@ -263,11 +268,13 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Reason for Delay / Not Applied'), findsNothing);
         expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
+        expect(find.text('Received Amount (₹)'), findsOneWidget);
 
         await tester.tap(find.text('Yes, Applied'));
         await tester.pumpAndSettle();
         expect(find.text('Application Submission Details'), findsNothing);
         expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
+        expect(find.text('Received Amount (₹)'), findsOneWidget);
 
         // Tapping Mark Scheme as Complete saves Complete with preserved submissionDate
         await tester.ensureVisible(find.text('Mark Scheme as Complete'));
@@ -312,6 +319,7 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
+        expect(find.text('Received Amount (₹)'), findsOneWidget);
         expect(find.textContaining('Benefit Received Date:'), findsOneWidget);
         expect(find.text('Mark Scheme as Complete'), findsOneWidget);
       },
@@ -364,6 +372,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
+        expect(find.text('Received Amount (₹)'), findsOneWidget);
 
         await tester.tap(find.text('Not Applied'));
         await tester.pumpAndSettle();
@@ -421,6 +430,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
+        expect(find.text('Received Amount (₹)'), findsOneWidget);
       },
     );
 
@@ -523,6 +533,149 @@ void main() {
       await StorageService.markCanonicalFollowupSynced('JK-UP-2026-000222', 'JK-SCH-0016');
       final remainingUnsynced = await StorageService.getUnsyncedPendingExclusionCount();
       expect(remainingUnsynced, 1);
+    });
+
+    testWidgets(
+      'Reopening a completed follow-up restores the saved received amount and benefit received date',
+      (tester) async {
+        final fakeRepo = _FakeFollowupRepository();
+
+        await tester.pumpWidget(
+          _wrapTestApp(
+            Scaffold(
+              body: RecordFollowupSheet(
+                beneficiaryId: 42,
+                beneficiaryName: 'Ramesh Kumar',
+                schemeId: 105,
+                schemeName: 'Kisan Samman Nidhi',
+                existingFollowup: const SchemeFollowupDetail(
+                  id: 999,
+                  status: 'Complete',
+                  submissionDate: '2026-10-15',
+                  benefitReceivedDate: '2026-11-20',
+                  receivedAmount: 6000.50,
+                ),
+                repository: fakeRepo,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Verifies Benefit Disbursement Confirmation card is present with saved date
+        expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
+        expect(find.textContaining('2026-11-20'), findsOneWidget);
+
+        // Verifies Received Amount (₹) field is restored with saved amount
+        expect(find.text('Received Amount (₹)'), findsOneWidget);
+        expect(find.text('6000.5'), findsOneWidget);
+        expect(find.text('For non-monetary benefits, enter 0'), findsOneWidget);
+
+        // Button shows Completed and is disabled
+        expect(find.text('Completed'), findsOneWidget);
+        final completedButton = tester.widget<ElevatedButton>(
+          find.ancestor(
+            of: find.text('Completed'),
+            matching: find.byWidgetPredicate((w) => w is ElevatedButton),
+          ),
+        );
+        expect(completedButton.onPressed, isNull);
+      },
+    );
+
+    testWidgets(
+      'Scheme Follow-up accepts 0 amount for non-monetary benefits and saves coordinator ID',
+      (tester) async {
+        final fakeRepo = _FakeFollowupRepository();
+        SharedPreferences.setMockInitialValues({
+          'user_profile': '{"id":"coord_101","username":"coordinator_test","user_code":"COORD-101"}',
+          'current_active_user_id': 'coord_101',
+        });
+
+        await tester.pumpWidget(
+          _wrapTestApp(
+            Scaffold(
+              body: RecordFollowupSheet(
+                beneficiaryId: 50,
+                beneficiaryName: 'Sunita Sharma',
+                schemeId: 201,
+                schemeName: 'Free Ration Card Scheme',
+                existingFollowup: const SchemeFollowupDetail(
+                  id: 1001,
+                  status: 'Applied',
+                  submissionDate: '2026-11-01',
+                ),
+                repository: fakeRepo,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Complete form has both Benefit Disbursement Confirmation and Received Amount (defaults to 0)
+        expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
+        expect(find.text('Received Amount (₹)'), findsOneWidget);
+        expect(find.text('0'), findsOneWidget);
+
+        // Submit complete follow-up
+        await tester.ensureVisible(find.text('Mark Scheme as Complete'));
+        await tester.tap(find.text('Mark Scheme as Complete'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepo.recordedPayloads.length, 1);
+        final payload = fakeRepo.recordedPayloads.single;
+        expect(payload.status, 'Complete');
+        expect(payload.receivedAmount, 0);
+        expect(payload.coordinatorId, 'coord_101');
+      },
+    );
+
+    test('Coordinator-specific amount tracking strictly isolates totals between coordinators', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      // Coordinator A records two completed schemes
+      await StorageService.saveCoordinatorFollowupAmount(
+        coordinatorId: 'coordinator_A',
+        beneficiaryId: 1,
+        schemeId: 10,
+        amount: 2500.50,
+      );
+      await StorageService.saveCoordinatorFollowupAmount(
+        coordinatorId: 'coordinator_A',
+        beneficiaryId: 2,
+        schemeId: 12,
+        amount: 5000,
+      );
+
+      // Coordinator B records one completed scheme
+      await StorageService.saveCoordinatorFollowupAmount(
+        coordinatorId: 'coordinator_B',
+        beneficiaryId: 3,
+        schemeId: 15,
+        amount: 15000,
+      );
+
+      // Coordinator A should only see Coordinator A's total: 2500.50 + 5000 = 7500.50
+      final totalA = await StorageService.getCoordinatorTotalAmountDistributed('coordinator_A');
+      expect(totalA, 7500.50);
+
+      // Coordinator B should only see Coordinator B's total: 15000
+      final totalB = await StorageService.getCoordinatorTotalAmountDistributed('coordinator_B');
+      expect(totalB, 15000.0);
+
+      // Coordinator C (new) sees 0
+      final totalC = await StorageService.getCoordinatorTotalAmountDistributed('coordinator_C');
+      expect(totalC, 0);
+
+      // Updating an existing scheme for Coordinator A replaces the amount rather than duplicating
+      await StorageService.saveCoordinatorFollowupAmount(
+        coordinatorId: 'coordinator_A',
+        beneficiaryId: 1,
+        schemeId: 10,
+        amount: 3000,
+      );
+      final updatedTotalA = await StorageService.getCoordinatorTotalAmountDistributed('coordinator_A');
+      expect(updatedTotalA, 8000.0);
     });
   });
 }

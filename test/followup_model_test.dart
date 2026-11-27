@@ -266,5 +266,43 @@ void main() {
       expect(scheme2.followup!.status, 'Applied');
       expect(scheme2.followup!.submissionDate, '2026-10-29');
     });
+
+    test('RecordFollowupPayload includes received_amount for decimal and zero amounts', () {
+      final payloadDecimal = const RecordFollowupPayload(
+        beneficiaryId: 10,
+        schemeId: 20,
+        status: 'Complete',
+        receivedAmount: 1500.50,
+      );
+      expect(payloadDecimal.toJson()['received_amount'], equals(1500.50));
+
+      final payloadZero = const RecordFollowupPayload(
+        beneficiaryId: 10,
+        schemeId: 20,
+        status: 'Complete',
+        receivedAmount: 0,
+      );
+      expect(payloadZero.toJson()['received_amount'], equals(0));
+    });
+
+    test('SchemeFollowupDetail and FollowupRegisterItem parse received_amount correctly', () {
+      final detailJson = {
+        'id': 1,
+        'status': 'Complete',
+        'received_amount': 25000.75,
+      };
+      final detail = SchemeFollowupDetail.fromJson(detailJson);
+      expect(detail.receivedAmount, equals(25000.75));
+
+      final itemJson = {
+        'followup_id': 1,
+        'status': 'Complete',
+        'received_amount': '12500',
+        'beneficiary': {'id': 5, 'name': 'Anita'},
+        'scheme': {'id': 9, 'name': 'Pension'},
+      };
+      final item = FollowupRegisterItem.fromJson(itemJson);
+      expect(item.receivedAmount, equals(12500));
+    });
   });
 }

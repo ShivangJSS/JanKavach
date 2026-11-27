@@ -13,16 +13,24 @@ import '../widgets/app_bottom_navigation_bar.dart';
 
 class BeneficiaryRegistrationScreen extends StatefulWidget {
   final int? localDraftId;
+  final int? initialStep;
 
-  const BeneficiaryRegistrationScreen({super.key, this.localDraftId});
+  const BeneficiaryRegistrationScreen({
+    super.key,
+    this.localDraftId,
+    this.initialStep,
+  });
 
   @override
   State<BeneficiaryRegistrationScreen> createState() =>
-      _BeneficiaryRegistrationScreenState();
+      BeneficiaryRegistrationScreenState();
 }
 
-class _BeneficiaryRegistrationScreenState
+class BeneficiaryRegistrationScreenState
     extends State<BeneficiaryRegistrationScreen> {
+  @visibleForTesting
+  Map<String, dynamic> buildPayloadForTest() => _buildBeneficiaryPayload();
+
   final GeographyService _geographyService = GeographyService();
 
   UserAssignedLocation? _assignedLocation;
@@ -82,7 +90,10 @@ class _BeneficiaryRegistrationScreenState
   final _formKey = GlobalKey<FormState>();
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, String> _values = {};
-  final Map<String, bool> _switches = {};
+  final Map<String, bool> _switches = {
+    'Do you have any children?': true,
+    'Are you an Indian Citizen?': true,
+  };
   final Set<String> _vulnerabilities = {};
 
   final List<String> _stepTitles = [
@@ -217,6 +228,20 @@ class _BeneficiaryRegistrationScreenState
           ..clear()
           ..addAll(switches.map((key, value) => MapEntry(key, value == true)));
 
+        if (!_switches.containsKey('Do you have any children?')) {
+          final payload = formData['payload'] is Map ? (formData['payload'] as Map) : null;
+          final answers = payload?['answers'] is Map ? (payload!['answers'] as Map) : null;
+          final rawVal = answers?['has_children'] ?? payload?['has_children'];
+          if (rawVal != null) {
+            _switches['Do you have any children?'] = (rawVal == 'Yes' || rawVal == true || rawVal == 1);
+          } else {
+            _switches['Do you have any children?'] = true;
+          }
+        }
+        if (!_switches.containsKey('Are you an Indian Citizen?')) {
+          _switches['Are you an Indian Citizen?'] = true;
+        }
+
         _vulnerabilities
           ..clear()
           ..addAll(vulnerabilities);
@@ -312,6 +337,9 @@ class _BeneficiaryRegistrationScreenState
   @override
   void initState() {
     super.initState();
+    if (widget.initialStep != null) {
+      _step = widget.initialStep!;
+    }
     _initGeographyAndDefaults();
 
     if (widget.localDraftId != null) {
@@ -329,6 +357,10 @@ class _BeneficiaryRegistrationScreenState
   }
 
   Future<void> _initGeographyAndDefaults() async {
+    if (widget.localDraftId == null) {
+      _switches['Do you have any children?'] ??= true;
+      _switches['Are you an Indian Citizen?'] ??= true;
+    }
     _assignedLocation = await StorageService.getUserAssignedLocation();
     await _loadStates();
 
@@ -869,7 +901,24 @@ class _BeneficiaryRegistrationScreenState
       if (match.isNotEmpty) return match.first.name;
       if (_currentSelectedVillageId != null) return 'Village #$_currentSelectedVillageId';
     }
-    return _values[label] ?? _controllers[label]?.text ?? '';
+    final ctrlText = _controllers[label]?.text;
+    if (ctrlText != null && ctrlText.isNotEmpty) {
+      return ctrlText;
+    }
+    return _values[label] ?? ctrlText ?? '';
+  }
+
+  bool get _hasChildren => _switches['Do you have any children?'] ?? true;
+
+  void _resetChildrenFields() {
+    _controller('Number of Girl Children').text = '0';
+    _controller('Number of Boy Children').text = '0';
+    _controller('Number of Children Below 18 Years').text = '0';
+    _controller('Number of Children Enrolled in School').text = '0';
+    _values['Number of Girl Children'] = '0';
+    _values['Number of Boy Children'] = '0';
+    _values['Number of Children Below 18 Years'] = '0';
+    _values['Number of Children Enrolled in School'] = '0';
   }
 
   // ADD THIS METHOD BELOW _value()
@@ -1024,7 +1073,10 @@ class _BeneficiaryRegistrationScreenState
               filled: readOnly,
               fillColor: readOnly ? const Color(0xFFF7FAF8) : Colors.white,
             ),
-            onChanged: (_) => _scheduleDraftSave(),
+            onChanged: (text) {
+              _values[label] = text;
+              _scheduleDraftSave();
+            },
             validator: validator ??
                 (value) {
                   if (readOnly) return null;
@@ -1497,7 +1549,11 @@ class _BeneficiaryRegistrationScreenState
     String? displayLabel,
     bool required = false,
     bool defaultYes = false,
+    ValueChanged<bool>? onChanged,
   }) {
+    if (!_switches.containsKey(label) && defaultYes) {
+      _switches[label] = true;
+    }
     final effectiveLabel = displayLabel ?? label;
     final value = _switches[label] ?? defaultYes;
 
@@ -1520,6 +1576,7 @@ class _BeneficiaryRegistrationScreenState
                   groupValue: value,
                   onChanged: (v) {
                     setState(() => _switches[label] = v!);
+                    onChanged?.call(v!);
                     _scheduleDraftSave();
                   },
                 ),
@@ -1535,6 +1592,7 @@ class _BeneficiaryRegistrationScreenState
                   groupValue: value,
                   onChanged: (v) {
                     setState(() => _switches[label] = v!);
+                    onChanged?.call(v!);
                     _scheduleDraftSave();
                   },
                 ),
@@ -1556,35 +1614,38 @@ class _BeneficiaryRegistrationScreenState
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE5EEE8)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE5F6EB),
-                  shape: BoxShape.circle,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE5F6EB),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: green, size: 19),
                 ),
-                child: Icon(icon, color: green, size: 19),
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF182E25),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF182E25),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          child,
-        ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
       ),
     );
   }
@@ -1943,11 +2004,107 @@ class _BeneficiaryRegistrationScreenState
         _section(
           context.tr('registration.household'),
           Icons.home_outlined,
-          _yesNo(
-            'Do you have any children?',
-            displayLabel: context.tr('registration.has_children'),
-            required: true,
-            defaultYes: true,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _yesNo(
+                'Do you have any children?',
+                displayLabel: context.tr('registration.has_children'),
+                required: true,
+                defaultYes: true,
+                onChanged: (hasChildren) {
+                  if (!hasChildren) {
+                    _resetChildrenFields();
+                  }
+                },
+              ),
+              if (_hasChildren) ...[
+                _textField(
+                  'Number of Girl Children',
+                  displayLabel: context.tr('registration.girl_children_count'),
+                  hint: '0',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  maxLength: 2,
+                  validator: (v) {
+                    final t = v?.trim() ?? '';
+                    if (t.isNotEmpty) {
+                      final n = int.tryParse(t);
+                      if (n == null || n < 0) {
+                        return 'Enter a valid non-negative number';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                _textField(
+                  'Number of Boy Children',
+                  displayLabel: context.tr('registration.boy_children_count'),
+                  hint: '0',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  maxLength: 2,
+                  validator: (v) {
+                    final t = v?.trim() ?? '';
+                    if (t.isNotEmpty) {
+                      final n = int.tryParse(t);
+                      if (n == null || n < 0) {
+                        return 'Enter a valid non-negative number';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                _textField(
+                  'Number of Children Below 18 Years',
+                  displayLabel: context.tr('registration.children_below_18'),
+                  hint: '0',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  maxLength: 2,
+                  validator: (v) {
+                    final t = v?.trim() ?? '';
+                    if (t.isNotEmpty) {
+                      final n = int.tryParse(t);
+                      if (n == null || n < 0) {
+                        return 'Enter a valid non-negative number';
+                      }
+                      final girls = int.tryParse(_value('Number of Girl Children')) ?? 0;
+                      final boys = int.tryParse(_value('Number of Boy Children')) ?? 0;
+                      final total = girls + boys;
+                      if (n > total) {
+                        return 'Children below 18 ($n) cannot exceed total children ($total)';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                _textField(
+                  'Number of Children Enrolled in School',
+                  displayLabel: context.tr('registration.children_enrolled_school'),
+                  hint: '0',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  maxLength: 2,
+                  validator: (v) {
+                    final t = v?.trim() ?? '';
+                    if (t.isNotEmpty) {
+                      final n = int.tryParse(t);
+                      if (n == null || n < 0) {
+                        return 'Enter a valid non-negative number';
+                      }
+                      final girls = int.tryParse(_value('Number of Girl Children')) ?? 0;
+                      final boys = int.tryParse(_value('Number of Boy Children')) ?? 0;
+                      final total = girls + boys;
+                      if (n > total) {
+                        return 'Children enrolled in school ($n) cannot exceed total children ($total)';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -2393,6 +2550,14 @@ class _BeneficiaryRegistrationScreenState
         return context.tr('registration.marital_status');
       case 'Do you have any children?':
         return context.tr('registration.has_children');
+      case 'Number of Girl Children':
+        return context.tr('registration.girl_children_count');
+      case 'Number of Boy Children':
+        return context.tr('registration.boy_children_count');
+      case 'Number of Children Below 18 Years':
+        return context.tr('registration.children_below_18');
+      case 'Number of Children Enrolled in School':
+        return context.tr('registration.children_enrolled_school');
       case 'Do you earn?':
         return context.tr('registration.earning_status');
       case 'Occupation':
@@ -2534,6 +2699,12 @@ class _BeneficiaryRegistrationScreenState
           'Category',
           'Marital Status',
           'Do you have any children?',
+          if (_hasChildren) ...[
+            'Number of Girl Children',
+            'Number of Boy Children',
+            'Number of Children Below 18 Years',
+            'Number of Children Enrolled in School',
+          ],
         ], Icons.person_outline),
         _reviewSection('Livelihood & Documents', [
           'Do you earn?',
@@ -2721,6 +2892,37 @@ class _BeneficiaryRegistrationScreenState
           return false;
         }
       }
+    }
+
+    if (_step == 3) {
+      if (!(_formKey.currentState?.validate() ?? true)) {
+        return false;
+      }
+      if (_hasChildren) {
+        final girls = int.tryParse(_value('Number of Girl Children')) ?? 0;
+        final boys = int.tryParse(_value('Number of Boy Children')) ?? 0;
+        final below18 = int.tryParse(_value('Number of Children Below 18 Years')) ?? 0;
+        final school = int.tryParse(_value('Number of Children Enrolled in School')) ?? 0;
+        final total = girls + boys;
+
+        if (below18 > total) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Children below 18 years cannot exceed total children count'),
+            ),
+          );
+          return false;
+        }
+        if (school > total) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Children enrolled in school cannot exceed total children count'),
+            ),
+          );
+          return false;
+        }
+      }
+      return true;
     }
 
     if (_step == 5 && _vulnerabilities.isEmpty) {
@@ -2938,7 +3140,17 @@ class _BeneficiaryRegistrationScreenState
         : ((earningStatusCode == 'YES') ? mapMonthlyIncomeBand(rawMonthlyIncome) : null);
 
     final bool isIndian = _switches['Are you an Indian Citizen?'] ?? true;
-    final bool hasChildren = _switches['Do you have any children?'] ?? false;
+    final int rawGirl = int.tryParse(_value('Number of Girl Children')) ?? (int.tryParse(_values['No. of girl child'] ?? '') ?? 0);
+    final int rawBoy = int.tryParse(_value('Number of Boy Children')) ?? (int.tryParse(_values['No. of boy child'] ?? '') ?? 0);
+    final int rawBelow18 = int.tryParse(_value('Number of Children Below 18 Years')) ?? 0;
+    final int rawSchool = int.tryParse(_value('Number of Children Enrolled in School')) ?? 0;
+
+    final bool hasChildren = _hasChildren;
+    final int girlCount = hasChildren ? rawGirl : 0;
+    final int boyCount = hasChildren ? rawBoy : 0;
+    final int totalChildren = hasChildren ? (girlCount + boyCount) : 0;
+    final int childrenUnder18 = hasChildren ? rawBelow18 : 0;
+    final int childrenInSchool = hasChildren ? rawSchool : 0;
     final bool hasBank = _switches['Do you have a bank account?'] ?? false;
     final bool aadhaarLinked = _switches['Is Phone Number Linked with Aadhaar Card?'] ?? false;
 
@@ -2970,12 +3182,13 @@ class _BeneficiaryRegistrationScreenState
         'social_category_other': cleanString('If Other, please mention'),
       if (maritalStatusCode != null) 'marital_status': maritalStatusCode,
       'has_children': hasChildren ? 'Yes' : 'No',
-      if (hasChildren) ...{
-        if (_values['No. of girl child'] != null)
-          'girl_child_count': int.tryParse(_values['No. of girl child']!) ?? 0,
-        if (_values['No. of boy child'] != null)
-          'boy_child_count': int.tryParse(_values['No. of boy child']!) ?? 0,
-      },
+      'girl_child_count': girlCount,
+      'boy_child_count': boyCount,
+      'total_children': totalChildren,
+      'children_under_18': childrenUnder18,
+      'children_in_school': childrenInSchool,
+      'children_below_18': childrenUnder18,
+      'children_enrolled_in_school': childrenInSchool,
       if (earningStatusCode != null) 'earning_status': earningStatusCode,
       if (occupationCode != null) 'occupation': occupationCode,
       if (rawOccupation != null && rawOccupation != 'Not recorded') 'occupation_name': rawOccupation,
@@ -3135,6 +3348,12 @@ class _BeneficiaryRegistrationScreenState
       if (monthlyIncomeBand != null) 'monthly_income_band': monthlyIncomeBand,
       if (rawMonthlyIncome != null && rawMonthlyIncome != 'Not recorded') 'monthly_income': rawMonthlyIncome,
       if (earningStatusCode == 'NO' || monthlyIncomeBand == 'NO_INCOME') 'annual_income': 0,
+      'has_children': hasChildren ? 'Yes' : 'No',
+      'girl_child_count': girlCount,
+      'boy_child_count': boyCount,
+      'total_children': totalChildren,
+      'children_under_18': childrenUnder18,
+      'children_in_school': childrenInSchool,
       'consent_given': (_switches['Confirmation'] ?? true) && (_switches['PrivacyConsent'] ?? true),
       'privacy_consent': _switches['PrivacyConsent'] ?? false,
       'remarks': '',
