@@ -110,7 +110,12 @@ class SchemeDetailsScreen extends StatelessWidget {
                       scheme.eligibilityStatus,
                       isEligible ? green : Colors.orange.shade800,
                     ),
-                    _chip('${scheme.matchPercent}% match', Colors.blue),
+                    if (isEligible)
+                      _chip('Ready to Apply', green)
+                    else if (scheme.missingDocuments.isNotEmpty)
+                      _chip('${scheme.missingDocuments.length} Document(s) Needed', Colors.orange.shade800)
+                    else
+                      _chip('Qualified', green),
                     if (scheme.schemeLevel != null)
                       _chip(scheme.schemeLevel!, darkGreen),
                   ],

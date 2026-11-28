@@ -280,12 +280,22 @@ class WhatsAppShareService {
     if (scheme.eligibilityStatus.trim().isNotEmpty) {
       final localizedStatus =
           _translateOption(scheme.eligibilityStatus, langCode, context);
-      final matchStr = _tr('match_percent', langCode, {
-        'percent': scheme.matchPercent.toStringAsFixed(0),
-      });
-      buffer.writeln(
-        '${_tr('eligibility_status', langCode)} $localizedStatus ($matchStr)',
-      );
+      if (scheme.isEligible) {
+        final matchStr = _tr('match_percent', langCode, {
+          'percent': '100',
+        });
+        buffer.writeln(
+          '${_tr('eligibility_status', langCode)} $localizedStatus ($matchStr)',
+        );
+      } else if (scheme.missingDocuments.isNotEmpty) {
+        buffer.writeln(
+          '${_tr('eligibility_status', langCode)} $localizedStatus (Missing: ${scheme.missingDocuments.join(', ')})',
+        );
+      } else {
+        buffer.writeln(
+          '${_tr('eligibility_status', langCode)} $localizedStatus',
+        );
+      }
     }
     buffer.writeln();
 

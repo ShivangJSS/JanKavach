@@ -353,7 +353,7 @@ class _EligibleSchemesScreenState
                               runSpacing: 4,
                               children: [
                                 _statusBadge(scheme.eligibilityStatus, isEligible),
-                                _smallTag('${scheme.matchPercent}% match'),
+                                _smallTag(isEligible ? '100% Eligible' : 'Potentially Eligible'),
                                 if (isChecked)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -811,7 +811,12 @@ class _EligibleSchemesScreenState
                   scheme.eligibilityStatus,
                   isEligible,
                 ),
-                _smallTag('${scheme.matchPercent}% match'),
+                if (isEligible)
+                  _smallTag('Ready to Apply')
+                else if (scheme.missingDocuments.isNotEmpty)
+                  _smallTag('${scheme.missingDocuments.length} Document(s) Needed')
+                else
+                  _smallTag('Qualified'),
               ],
             ),
 
@@ -840,13 +845,33 @@ class _EligibleSchemesScreenState
 
             if (scheme.missingDocuments.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(
-                '${scheme.missingDocuments.length} document(s) '
-                    'to check',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF996515),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E7),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFFE0B2)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.pending_actions_rounded,
+                      size: 18,
+                      color: Color(0xFFC78500),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Missing Document(s): ${scheme.missingDocuments.join(', ')}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF996515),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

@@ -236,8 +236,11 @@ class EligibleSchemeModel {
     );
   }
 
-  // Application information helpers.
+  // Status helpers.
+  bool get isEligible => eligibilityStatus.trim().toLowerCase() == 'eligible';
+  bool get isPotentiallyEligible => eligibilityStatus.trim().toLowerCase().contains('potential');
 
+  // Application information helpers.
   String? get applicationMode =>
       _toNullableString(application['mode']);
 

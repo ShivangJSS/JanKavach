@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kavach/data/engine/offline_eligibility_engine.dart';
+import 'package:kavach/data/engine/scheme_rules_data.dart';
 
 void main() {
   group('OfflineEligibilityEngine Tests', () {
@@ -173,6 +174,103 @@ void main() {
       final profile = engine.buildProfile(beneficiary);
       expect(profile['has_aadhaar'], equals(1));
       expect(profile['has_bank_account'], equals(1));
+    });
+
+    test('Model 1: Failing an intrinsic qualification (like age) marks scheme Not Eligible, NEVER Potentially Eligible', () {
+      // Custom scheme requiring Female, Age >= 60, and Bank Account
+      final customRules = [
+        const SchemeRuleData(
+          schemeId: 999,
+          ruleGroup: 1,
+          attributeKey: 'gender',
+          operator: 'eq',
+          value1: 'Female',
+          isMandatory: true,
+        ),
+        const SchemeRuleData(
+          schemeId: 999,
+          ruleGroup: 1,
+          attributeKey: 'age',
+          operator: 'gte',
+          value1: '60',
+          isMandatory: false, // In old engine, this might have yielded 66% match!
+        ),
+        const SchemeRuleData(
+          schemeId: 999,
+          ruleGroup: 1,
+          attributeKey: 'has_bank_account',
+          operator: 'eq',
+          value1: '1',
+          isMandatory: true,
+        ),
+      ];
+
+      final customEngine = OfflineEligibilityEngine(customRules: customRules);
+
+      // Applicant is 25 (fails age), has Female, has Bank Account
+      final result = customEngine.evaluateScheme({
+        'gender': 'Female',
+        'age': 25,
+        'has_bank_account': 1,
+      }, 999, customRules);
+
+      // In Model 1, ANY failed qualification immediately results in Not Eligible
+      expect(result['eligibility_status'], equals(OfflineEligibilityEngine.notEligible));
+      expect(result['match_percent'], equals(0.0));
+      expect(result['reason_text'], contains('Not eligible because Age is 25 but the scheme requires 60 or above'));
+    });
+
+    test('Model 1: 100% qualified on intrinsic criteria but missing document yields Potentially Eligible with missing_documents', () {
+      final customRules = [
+        const SchemeRuleData(
+          schemeId: 998,
+          ruleGroup: 1,
+          attributeKey: 'gender',
+          operator: 'eq',
+          value1: 'Female',
+          isMandatory: true,
+        ),
+        const SchemeRuleData(
+          schemeId: 998,
+          ruleGroup: 1,
+          attributeKey: 'age',
+          operator: 'gte',
+          value1: '60',
+          isMandatory: true,
+        ),
+        const SchemeRuleData(
+          schemeId: 998,
+          ruleGroup: 1,
+          attributeKey: 'has_caste_certificate',
+          operator: 'eq',
+          value1: '1',
+          isMandatory: true,
+        ),
+      ];
+
+      final customEngine = OfflineEligibilityEngine(customRules: customRules);
+
+      // Applicant is 65, Female, but caste certificate is 0
+      final result = customEngine.evaluateScheme({
+        'gender': 'Female',
+        'age': 65,
+        'has_caste_certificate': 0,
+      }, 998, customRules);
+
+      expect(result['eligibility_status'], equals(OfflineEligibilityEngine.potential));
+      expect(result['missing_documents'], contains('Caste Certificate'));
+      expect(result['reason_text'], contains('Caste Certificate'));
+
+      // Now providing caste certificate makes it 100% Eligible!
+      final resultEligible = customEngine.evaluateScheme({
+        'gender': 'Female',
+        'age': 65,
+        'has_caste_certificate': 1,
+      }, 998, customRules);
+
+      expect(resultEligible['eligibility_status'], equals(OfflineEligibilityEngine.eligible));
+      expect(resultEligible['missing_documents'], isEmpty);
+      expect(resultEligible['match_percent'], equals(100.0));
     });
   });
 }

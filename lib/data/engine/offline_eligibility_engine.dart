@@ -374,8 +374,7 @@ class OfflineEligibilityEngine {
       }
     }
 
-    // Sort by priority first (Priority 1, Priority 2, non-null ascending, null last),
-    // then matchPercent descending, then schemeId ascending.
+    // For Eligible schemes: sort by priority first, then schemeId.
     int comparePriorityAndScore(EligibleSchemeModel a, EligibleSchemeModel b) {
       final aPriority = (a.priority['id'] as num?)?.toInt();
       final bPriority = (b.priority['id'] as num?)?.toInt();
@@ -393,8 +392,27 @@ class OfflineEligibilityEngine {
       return (a.schemeId ?? 0).compareTo(b.schemeId ?? 0);
     }
 
+    // For Potentially Eligible schemes: sort by fewest missing documents first,
+    // so schemes nearest to completion appear at the top, then priority, then schemeId.
+    int comparePotentialSchemes(EligibleSchemeModel a, EligibleSchemeModel b) {
+      final docCmp = a.missingDocuments.length.compareTo(b.missingDocuments.length);
+      if (docCmp != 0) return docCmp;
+
+      final aPriority = (a.priority['id'] as num?)?.toInt();
+      final bPriority = (b.priority['id'] as num?)?.toInt();
+
+      if (aPriority == null && bPriority != null) return 1;
+      if (aPriority != null && bPriority == null) return -1;
+      if (aPriority != null && bPriority != null) {
+        final cmp = aPriority.compareTo(bPriority);
+        if (cmp != 0) return cmp;
+      }
+
+      return (a.schemeId ?? 0).compareTo(b.schemeId ?? 0);
+    }
+
     eligibleList.sort(comparePriorityAndScore);
-    potentialList.sort(comparePriorityAndScore);
+    potentialList.sort(comparePotentialSchemes);
 
     final int totalEvaluated = applicable.length;
     final int eligibleCount = eligibleList.length;
@@ -488,6 +506,8 @@ class OfflineEligibilityEngine {
         'passed_reasons': <Map<String, dynamic>>[],
         'failed_reasons': <Map<String, dynamic>>[],
         'unknown_reasons': <Map<String, dynamic>>[],
+        'missing_documents': <String>[],
+        'available_documents': <String>[],
         'reason_text':
             'No eligibility rules have been configured for this scheme yet, so eligibility must be confirmed manually.',
       };
@@ -525,11 +545,57 @@ class OfflineEligibilityEngine {
       'passed_reasons': best['passed'],
       'failed_reasons': best['failed'],
       'unknown_reasons': best['unknown'],
+      'missing_documents': best['missing_documents'] ?? <String>[],
+      'available_documents': best['available_documents'] ?? <String>[],
       'reason_text': explain(status, best),
     };
   }
 
-  /// Evaluates the AND-ed rules of one group.
+  /// Determines whether an attribute is an actionable document/certificate requirement
+  /// rather than a core intrinsic qualification criterion (like age, gender, caste, income).
+  bool isDocumentAttribute(String key) {
+    final lower = key.trim().toLowerCase();
+    final attr = _attributes[key];
+    if (attr != null && attr.groupLabel?.trim().toLowerCase() == 'documents') {
+      return true;
+    }
+    return lower.startsWith('doc_') ||
+        lower.startsWith('has_doc_') ||
+        lower.contains('certificate') ||
+        lower == 'has_aadhaar' ||
+        lower == 'has_bank_account' ||
+        lower == 'bank_aadhaar_linked' ||
+        lower == 'phone_aadhaar_linked' ||
+        lower == 'has_ration_card';
+  }
+
+  /// Returns user-friendly name for a required document.
+  String documentLabel(String key) {
+    final attr = _attributes[key];
+    if (attr != null && attr.label.isNotEmpty) {
+      final label = attr.label.trim();
+      if (key == 'has_aadhaar') return 'Aadhaar Card';
+      if (key == 'has_bank_account') return 'Bank Account';
+      if (key == 'bank_aadhaar_linked') return 'Aadhaar-linked Bank Account';
+      if (key == 'has_ration_card') return 'Ration Card';
+      if (label.endsWith(' Available')) {
+        return label.substring(0, label.length - 10).trim();
+      }
+      return label;
+    }
+    if (key == 'has_caste_certificate' || key == 'doc_caste') return 'Caste Certificate';
+    if (key == 'has_income_certificate' || key == 'doc_income') return 'Income Certificate';
+    if (key == 'has_disability_certificate' || key == 'doc_disability_card') return 'Disability Certificate / UDID';
+    if (key == 'doc_domicile') return 'Domicile Certificate';
+    return attributeLabel(key);
+  }
+
+  /// Evaluates the AND-ed rules of one group using Deterministic Two-Tier Matching:
+  /// Tier 1: Core Qualification Gate (Age, Gender, Income, Caste, Location, etc.)
+  ///         ALL qualification conditions MUST be 100% satisfied. If ANY fails -> NOT ELIGIBLE.
+  /// Tier 2: Document Gate (Certificates, Aadhaar, Bank Account, Ration Card, etc.)
+  ///         If ALL qualification rules pass and all documents are available -> ELIGIBLE (100%).
+  ///         If ALL qualification rules pass but documents are missing -> POTENTIALLY ELIGIBLE.
   Map<String, dynamic> evaluateGroup(
     Map<String, dynamic> profile,
     List<SchemeRuleData> rules,
@@ -537,107 +603,189 @@ class OfflineEligibilityEngine {
     final List<Map<String, dynamic>> passed = [];
     final List<Map<String, dynamic>> failed = [];
     final List<Map<String, dynamic>> unknown = [];
-    int totalWeight = 0;
-    int passedWeight = 0;
-    bool mandatoryFailed = false;
+    final List<String> missingDocuments = [];
+    final List<String> availableDocuments = [];
+
+    bool qualificationFailed = false;
+    bool qualificationUnknown = false;
+    int qualificationCount = 0;
+    int passedQualificationCount = 0;
     int mandatoryCount = 0;
 
     for (final rule in rules) {
-      final weight = rule.weight > 0 ? rule.weight : 1;
-      totalWeight += weight;
       if (rule.isMandatory) {
         mandatoryCount++;
       }
-
       final key = rule.attributeKey;
       final value = profile[key];
       final label = attributeLabel(key);
       final expected = describeExpectation(rule);
+      final isDoc = isDocumentAttribute(key);
 
-      // is_set / not_set are the only operators that judge absence
-      if (rule.operator != 'is_set' &&
-          rule.operator != 'not_set' &&
-          (value == null || value == '')) {
-        unknown.add({
-          'attribute': key,
-          'label': label,
-          'expected': expected,
-          'message': '$label has not been recorded for this beneficiary',
-          'rule': rule.description,
-          'mandatory': rule.isMandatory,
-        });
-        continue;
-      }
+      // Check for missing/unrecorded value
+      final isUnrecorded = (value == null || value.toString().trim().isEmpty);
 
-      if (testRule(value, rule)) {
-        passedWeight += weight;
-        passed.add({
-          'attribute': key,
-          'label': label,
-          'actual': displayValue(key, value),
-          'expected': expected,
-          'message': '$label is ${displayValue(key, value)}',
-          'rule': rule.description,
-        });
+      if (isDoc) {
+        // Document / Certificate requirement evaluation
+        final docName = documentLabel(key);
+        if (isUnrecorded) {
+          missingDocuments.add(docName);
+          unknown.add({
+            'attribute': key,
+            'label': label,
+            'expected': expected,
+            'message': '$docName is not available or recorded',
+            'rule': rule.description,
+            'is_document': true,
+          });
+        } else if (testRule(value, rule)) {
+          availableDocuments.add(docName);
+          passed.add({
+            'attribute': key,
+            'label': label,
+            'actual': displayValue(key, value),
+            'expected': expected,
+            'message': '$docName is available',
+            'rule': rule.description,
+            'is_document': true,
+          });
+        } else {
+          missingDocuments.add(docName);
+          failed.add({
+            'attribute': key,
+            'label': label,
+            'actual': displayValue(key, value),
+            'expected': expected,
+            'message': '$docName is missing or required: $expected',
+            'rule': rule.description,
+            'is_document': true,
+          });
+        }
       } else {
-        failed.add({
-          'attribute': key,
-          'label': label,
-          'actual': displayValue(key, value),
-          'expected': expected,
-          'message':
-              '$label is ${displayValue(key, value)}, but the scheme requires $expected',
-          'rule': rule.description,
-          'mandatory': rule.isMandatory,
-        });
-        if (rule.isMandatory) {
-          mandatoryFailed = true;
+        // Core Qualification Criterion evaluation (Age, Gender, Income, Caste, State, etc.)
+        qualificationCount++;
+        if (rule.operator != 'is_set' && rule.operator != 'not_set' && isUnrecorded) {
+          qualificationUnknown = true;
+          unknown.add({
+            'attribute': key,
+            'label': label,
+            'expected': expected,
+            'message': '$label has not been recorded for this beneficiary',
+            'rule': rule.description,
+            'is_document': false,
+            'mandatory': rule.isMandatory,
+          });
+          continue;
+        }
+
+        if (testRule(value, rule)) {
+          passedQualificationCount++;
+          passed.add({
+            'attribute': key,
+            'label': label,
+            'actual': displayValue(key, value),
+            'expected': expected,
+            'message': '$label is ${displayValue(key, value)}',
+            'rule': rule.description,
+            'is_document': false,
+          });
+        } else {
+          // Qualification condition NOT MET! (e.g. age mismatch, income too high, gender mismatch)
+          qualificationFailed = true;
+          failed.add({
+            'attribute': key,
+            'label': label,
+            'actual': displayValue(key, value),
+            'expected': expected,
+            'message': '$label is ${displayValue(key, value)}, but the scheme requires $expected',
+            'rule': rule.description,
+            'is_document': false,
+            'mandatory': rule.isMandatory,
+          });
         }
       }
     }
 
+    // Determine Status:
+    // 1. If ANY qualification rule failed -> NOT ELIGIBLE
+    // 2. If qualification rules are incomplete (unknown) -> NEEDS VERIFICATION
+    // 3. If ALL qualification rules passed (100% qualified):
+    //    - If all required documents are present and well-evidenced -> ELIGIBLE (100%)
+    //    - If any required document is missing or single soft rule -> POTENTIALLY ELIGIBLE
+    String status;
+    double percent;
+
+    if (qualificationFailed) {
+      status = notEligible;
+      percent = 0.0;
+    } else if (qualificationUnknown) {
+      status = verify;
+      percent = 0.0;
+    } else {
+      // 100% Core Qualifications MET!
+      final bool wellEvidenced = mandatoryCount > 0 || rules.length >= 3;
+      if (missingDocuments.isEmpty && wellEvidenced) {
+        status = eligible;
+        percent = 100.0;
+      } else {
+        status = potential;
+        percent = 100.0;
+      }
+    }
+
     return {
+      'status': status,
+      'eligibility_status': status,
+      'percent': percent,
       'passed': passed,
       'failed': failed,
       'unknown': unknown,
-      'percent': totalWeight > 0 ? (passedWeight / totalWeight) * 100.0 : 0.0,
-      'mandatory_failed': mandatoryFailed,
+      'missing_documents': missingDocuments.toSet().toList(),
+      'available_documents': availableDocuments.toSet().toList(),
+      'qualification_failed': qualificationFailed,
+      'qualification_unknown': qualificationUnknown,
+      'qualification_count': qualificationCount,
+      'passed_qualification_count': passedQualificationCount,
       'rule_count': rules.length,
-      'mandatory_count': mandatoryCount,
+      'missing_doc_count': missingDocuments.toSet().length,
     };
   }
 
-  /// Prefer a group with no mandatory failure, then higher score, then fewer unknowns.
+  /// Prefer a group with higher status: Eligible > Potentially Eligible > Needs Verification > Not Eligible.
+  /// For Potentially Eligible, tie-break on FEWER missing documents.
   bool _isBetter(Map<String, dynamic> candidate, Map<String, dynamic> current) {
-    if (candidate['mandatory_failed'] != current['mandatory_failed']) {
-      return candidate['mandatory_failed'] == false;
+    int statusRank(String s) {
+      if (s == eligible) return 3;
+      if (s == potential) return 2;
+      if (s == verify) return 1;
+      return 0;
     }
-    final double diff =
-        (candidate['percent'] as double) - (current['percent'] as double);
-    if (diff.abs() > 0.001) {
-      return candidate['percent'] > current['percent'];
+
+    final cRank = statusRank(candidate['eligibility_status'] ?? '');
+    final currRank = statusRank(current['eligibility_status'] ?? '');
+
+    if (cRank != currRank) {
+      return cRank > currRank;
     }
-    return (candidate['unknown'] as List).length <
-        (current['unknown'] as List).length;
+
+    // Both are Potentially Eligible: tie-break on FEWER missing documents
+    if (cRank == 2) {
+      final cMissing = (candidate['missing_doc_count'] as int? ?? 0);
+      final currMissing = (current['missing_doc_count'] as int? ?? 0);
+      if (cMissing != currMissing) {
+        return cMissing < currMissing;
+      }
+    }
+
+    // Tie-break on more passed qualification rules
+    final cPassed = (candidate['passed_qualification_count'] as int? ?? 0);
+    final currPassed = (current['passed_qualification_count'] as int? ?? 0);
+    return cPassed > currPassed;
   }
 
-  /// Exact replica of EligibilityEngine.php grade()
+  /// Status is directly determined by evaluateGroup in Model 1
   String grade(Map<String, dynamic> outcome) {
-    if (outcome['mandatory_failed'] == true) {
-      return notEligible;
-    }
-    final double percent = outcome['percent'] as double;
-    final bool hasUnknown = (outcome['unknown'] as List).isNotEmpty;
-    final bool wellEvidenced = (outcome['mandatory_count'] as int) > 0 ||
-        (outcome['rule_count'] as int) >= 3;
-
-    if (!hasUnknown && percent >= eligibleThreshold && wellEvidenced) {
-      return eligible;
-    }
-    if (percent >= potentialThreshold) {
-      return potential;
-    }
-    return verify;
+    return outcome['eligibility_status'] as String? ?? notEligible;
   }
 
   /// Evaluates single comparison condition against an attribute.
@@ -856,37 +1004,59 @@ class OfflineEligibilityEngine {
   }
 
   String explain(String status, Map<String, dynamic> outcome) {
-    final passed = (outcome['passed'] as List)
+    final passed = (outcome['passed'] as List? ?? [])
         .map((r) => '${r['label']} is ${r['actual']}')
         .toList();
-    final failed = (outcome['failed'] as List)
+    final failed = (outcome['failed'] as List? ?? [])
         .map((r) => '${r['label']} is ${r['actual']} (needs ${r['expected']})')
         .toList();
-    final unknown = (outcome['unknown'] as List)
+    final unknown = (outcome['unknown'] as List? ?? [])
         .map((r) => r['label'].toString())
         .toList();
+    final missingDocs = (outcome['missing_documents'] as List? ?? []).cast<String>();
 
     final List<String> parts = [];
     if (status == notEligible) {
-      final blockers = (outcome['failed'] as List)
-          .where((r) => r['mandatory'] == true)
+      final blockers = (outcome['failed'] as List? ?? [])
+          .where((r) => r['is_document'] != true)
           .map((r) =>
               '${r['label']} is ${r['actual']} but the scheme requires ${r['expected']}')
           .take(3)
           .toList();
-      parts.add('Not eligible because ${blockers.join('; ')}.');
+      if (blockers.isNotEmpty) {
+        parts.add('Not eligible because ${blockers.join('; ')}.');
+      } else if (failed.isNotEmpty) {
+        parts.add('Not eligible because ${failed.take(3).join('; ')}.');
+      } else {
+        parts.add('Does not meet the qualification criteria for this scheme.');
+      }
       if (passed.isNotEmpty) {
         parts.add('Other conditions met: ${passed.take(4).join(', ')}.');
       }
       return parts.join(' ');
     }
 
-    if (passed.isNotEmpty) {
-      parts.add('Matched because ${passed.take(5).join(', ')}.');
+    if (status == potential) {
+      if (missingDocs.isNotEmpty) {
+        parts.add('Eligible by qualification criteria, but pending required document(s): ${missingDocs.join(', ')}.');
+      } else {
+        parts.add('Qualified on eligibility criteria, pending document verification.');
+      }
+      if (passed.isNotEmpty) {
+        parts.add('Matched criteria: ${passed.take(5).join(', ')}.');
+      }
+      return parts.join(' ');
     }
-    if (failed.isNotEmpty) {
-      parts.add('Conditions not met: ${failed.take(3).join('; ')}.');
+
+    if (status == eligible) {
+      if (passed.isNotEmpty) {
+        parts.add('Matched because ${passed.take(5).join(', ')}.');
+      } else {
+        parts.add('100% Eligible: Meets all criteria for this scheme.');
+      }
+      return parts.join(' ');
     }
+
     if (unknown.isNotEmpty) {
       parts.add('Still to confirm: ${unknown.take(5).join(', ')}.');
     }
@@ -958,6 +1128,26 @@ class OfflineEligibilityEngine {
         .map((r) => r is Map ? (r['message'] ?? r.toString()) : r.toString())
         .toList();
 
+    final List<String> missingDocs = (outcome['missing_documents'] as List? ?? [])
+        .map((e) => e.toString())
+        .toList();
+
+    final List<SchemeDocumentItem> missingDocItems = missingDocs.map((docName) {
+      return SchemeDocumentItem(
+        documentName: docName,
+        isMandatory: true,
+        isAvailable: false,
+      );
+    }).toList();
+
+    final List<SchemeDocumentItem> availableDocItems = (outcome['available_documents'] as List? ?? [])
+        .map((e) => SchemeDocumentItem(
+              documentName: e.toString(),
+              isMandatory: true,
+              isAvailable: true,
+            ))
+        .toList();
+
     return EligibleSchemeModel(
       matchId: null,
       schemeId: (scheme['id'] as num?)?.toInt() ?? 0,
@@ -990,7 +1180,9 @@ class OfflineEligibilityEngine {
       passedReasons: passedReasons,
       failedReasons: failedReasons,
       unknownReasons: unknownReasons,
-      missingDocuments: const [],
+      missingDocuments: missingDocs,
+      missingDocumentItems: missingDocItems,
+      availableDocuments: availableDocItems,
       benefit: benefit,
       application: application,
       sourceUrl: scheme['source_url']?.toString(),

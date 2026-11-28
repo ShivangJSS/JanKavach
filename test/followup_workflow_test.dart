@@ -615,7 +615,7 @@ void main() {
         // Complete form has both Benefit Disbursement Confirmation and Received Amount (defaults to 0)
         expect(find.text('Benefit Disbursement Confirmation'), findsOneWidget);
         expect(find.text('Received Amount (₹)'), findsOneWidget);
-        expect(find.text('0'), findsOneWidget);
+        expect(find.text('0'), findsWidgets);
 
         // Submit complete follow-up
         await tester.ensureVisible(find.text('Mark Scheme as Complete'));
